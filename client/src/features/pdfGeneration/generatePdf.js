@@ -258,16 +258,10 @@ export const generateGroupForm = async (formData) => {
       }
     }
 
-    // Serialize and Download
     const pdfBytes = await pdfDoc.save();
     const blob = new Blob([pdfBytes], { type: 'application/pdf' });
     
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `Group_Declaration_${formData.leaderMatric}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    return URL.createObjectURL(blob);
 
   } catch (error) {
     console.error("Error generating Group PDF:", error);
