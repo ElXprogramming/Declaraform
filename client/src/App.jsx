@@ -10,7 +10,7 @@ export default function App() {
       <div className="max-w-[1400px] mx-auto w-full">
         <header className="mb-8 text-center">
           <h1 className="text-3xl font-extrabold text-blue-900 mb-2">
-            UMS FKI Declaration Form Autofill
+            UMS Declaration Form Filler
           </h1>
           <p className="text-gray-500">Generate your asynchronous mode assessment forms instantly.</p>
         </header>
@@ -43,6 +43,21 @@ export default function App() {
         <main className="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-100">
           {activeTab === 'individual' ? <IndividualForm /> : <GroupForm />}
         </main>
+
+        {/* Main Content Above */}
+        
+        {/* Footer */}
+        <footer className="mt-12 mb-8 text-center text-sm text-gray-500">
+          <p>
+            Concept and Development by <strong>Eldion Ryan Godius</strong>.
+          </p>
+          <p className="mt-1">
+            Have feedback or issues? Contact me at <a href="mailto:nayrnoidle@gmail.com" className="text-blue-600 hover:underline">nayrnoidle@gmail.com</a>
+          </p>
+          <p className="mt-2 text-xs text-gray-400">
+            &copy; {new Date().getFullYear()} All Rights Reserved. Not officially affiliated with Universiti Malaysia Sabah.
+          </p>
+        </footer>
       </div>
     </div>
   );
