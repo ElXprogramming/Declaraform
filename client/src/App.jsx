@@ -1,27 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import IndividualForm from './features/individualForm/IndividualForm';
 import GroupForm from './features/groupForm/GroupForm';
+import Ballpit from './components/backgrounds/Ballpit'; 
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('individual');
+  
+  // Add a mounted state
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Set it to true only after the first render
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-800 p-4 md:p-8">
-      <div className="max-w-[1400px] mx-auto w-full">
-        <header className="mb-8 text-center">
-          <h1 className="text-3xl font-extrabold text-blue-900 mb-2">
+    <div className="relative min-h-screen text-gray-800 p-4 md:p-8 overflow-hidden bg-gray-900">
+      
+      {/* Only render the Ballpit if the DOM is mounted */}
+      <div className="absolute inset-0 z-0">
+        {/*{isMounted && <Ballpit />}*/}
+      </div>
+
+      {/* 4. The Content Layer: Add relative and z-10 so it sits on top of the balls */}
+      <div className="relative z-10 max-w-[1400px] mx-auto w-full">
+        
+        {/* We make the header text white or highly contrasted against the background */}
+        <header className="mb-8 text-center drop-shadow-md">
+          <h1 className="text-3xl font-extrabold text-white mb-2">
             UMS Declaration Form Filler
           </h1>
-          <p className="text-gray-500">Generate your asynchronous mode assessment forms instantly.</p>
+          <p className="text-gray-200">Generate your asynchronous mode assessment forms instantly.</p>
         </header>
 
-        {/* Tab Navigation */}
-        <div className="flex justify-center mb-6 border-b border-gray-200">
+        {/* Tab Navigation (Added glassmorphism to tabs) */}
+        <div className="flex justify-center mb-6 border-b border-gray-400/30">
           <button
             className={`px-6 py-3 font-semibold text-sm transition-colors ${
               activeTab === 'individual'
-                ? 'border-b-2 border-blue-600 text-blue-600'
-                : 'text-gray-500 hover:text-blue-500'
+                ? 'border-b-2 border-blue-400 text-blue-400 drop-shadow'
+                : 'text-gray-300 hover:text-white'
             }`}
             onClick={() => setActiveTab('individual')}
           >
@@ -30,8 +48,8 @@ export default function App() {
           <button
             className={`px-6 py-3 font-semibold text-sm transition-colors ${
               activeTab === 'group'
-                ? 'border-b-2 border-blue-600 text-blue-600'
-                : 'text-gray-500 hover:text-blue-500'
+                ? 'border-b-2 border-blue-400 text-blue-400 drop-shadow'
+                : 'text-gray-300 hover:text-white'
             }`}
             onClick={() => setActiveTab('group')}
           >
@@ -39,25 +57,23 @@ export default function App() {
           </button>
         </div>
 
-        {/* Form Container */}
-        <main className="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-100">
+        {/* Form Container: Added bg-white/90 and backdrop-blur for a frosted glass effect */}
+        <main className="bg-white/90 backdrop-blur-md p-6 md:p-8 rounded-xl shadow-2xl border border-white/20">
           {activeTab === 'individual' ? <IndividualForm /> : <GroupForm />}
         </main>
 
-        {/* Main Content Above */}
-        
-        {/* Footer */}
-        <footer className="mt-12 mb-8 text-center text-sm text-gray-500">
+        <footer className="mt-12 mb-8 text-center text-sm text-gray-300 drop-shadow-md">
           <p>
             Concept and Development by <strong>Eldion Ryan Godius</strong>.
           </p>
           <p className="mt-1">
-            Have feedback or issues? Contact me at <a href="mailto:nayrnoidle@gmail.com" className="text-blue-600 hover:underline">nayrnoidle@gmail.com</a>
+            Have feedback or issues? Contact me at <a href="mailto:nayrnoidle@gmail.com" className="text-blue-300 hover:underline">nayrnoidle@gmail.com</a>
           </p>
           <p className="mt-2 text-xs text-gray-400">
             &copy; {new Date().getFullYear()} All Rights Reserved. Not officially affiliated with Universiti Malaysia Sabah.
           </p>
         </footer>
+
       </div>
     </div>
   );
