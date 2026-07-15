@@ -7,8 +7,8 @@ export default function GroupForm() {
   const [activeSigningIndex, setActiveSigningIndex] = useState(null);
 
   const [formData, setFormData] = useState({
-    leaderName: 'Eldion Ryan Godius',
-    leaderMatric: 'BI23110190',
+    leaderName: '',
+    leaderMatric: '',
     leaderPhoneEmail: '',
     leaderIC: '',
     courseName: '',

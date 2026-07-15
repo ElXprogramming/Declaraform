@@ -4,8 +4,8 @@ import SignatureCanvas from '../../components/form/SignatureCanvas';
 
 export default function IndividualForm() {
   const [formData, setFormData] = useState({
-    fullName: 'Eldion Ryan Godius',
-    matricNo: 'BI23110190',
+    fullName: '',
+    matricNo: '',
     phoneEmail: '',
     courseName: '',
     courseCode: '',
