@@ -12,7 +12,8 @@
   "dependencies": {
     "pdf-lib": "^1.17.1",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "react-signature-canvas": "^1.1.0-alpha.2"
   },
   "devDependencies": {
     "@types/react": "^19.2.17",

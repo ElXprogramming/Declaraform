@@ -7,7 +7,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 p-4 md:p-8">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-[1400px] mx-auto w-full">
         <header className="mb-8 text-center">
           <h1 className="text-3xl font-extrabold text-blue-900 mb-2">
             UMS FKI Declaration Form Autofill

@@ -70,16 +70,38 @@ export const generateIndividualForm = async (formData) => {
     firstPage.drawText(formData.icPassport, { x: 90, y: 182, ...fontSettings });
     firstPage.drawText(formData.date, { x: 294, y: 112, ...fontSettings });
 
-    // Serialize and Download
+    if (formData.signature) {
+      const signatureBytes = await fetch(formData.signature).then((res) => res.arrayBuffer());
+      
+      let signatureImage;
+      if (formData.signature.includes('image/png')) {
+        signatureImage = await pdfDoc.embedPng(signatureBytes);
+      } else if (formData.signature.includes('image/jpeg')) {
+        signatureImage = await pdfDoc.embedJpg(signatureBytes);
+      }
+
+      if (signatureImage) {
+        // Change this line to use the new parameter! Make sure to parse it as a float.
+        const scaleValue = parseFloat(formData.signatureScale);
+        const scaledDims = signatureImage.scale(scaleValue);
+
+        firstPage.drawImage(signatureImage, {
+          x: 30,             
+          y: 120,             
+          width: scaledDims.width,
+          height: scaledDims.height,
+        });
+      }
+    }
+
+    // Serialize and Return URL
     const pdfBytes = await pdfDoc.save();
     const blob = new Blob([pdfBytes], { type: 'application/pdf' });
     
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `Individual_Declaration_${formData.matricNo}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Instead of clicking an invisible link, we just return the URL
+    return URL.createObjectURL(blob);
+
+
 
   } catch (error) {
     console.error("Error generating Individual PDF:", error);
@@ -96,7 +118,7 @@ export const generateGroupForm = async (formData) => {
     const firstPage = pages[0]; // Leader info
     const secondPage = pages[1]; // Table of members
 
-    drawDebugGrid(firstPage);
+    //drawDebugGrid(firstPage);
 
     const fontSettings = { size: 11 };
 
@@ -107,22 +129,134 @@ export const generateGroupForm = async (formData) => {
     firstPage.drawText(formData.courseName, { x: 220, y: 580, ...fontSettings });
     firstPage.drawText(formData.courseCode, { x: 220, y: 559, ...fontSettings });
 
+    const checkMark = 'X';
+    switch (formData.assessmentType) {
+      case 'Assignment':
+        firstPage.drawText(checkMark, { x: 222, y: 532, size: 12 });
+        break;
+      case 'Quiz':
+        firstPage.drawText(checkMark, { x: 222, y: 510, size: 12 });
+        break;
+      case 'Lab Exercise':
+        firstPage.drawText(checkMark, { x: 393, y: 529, size: 12 });
+        break;
+      case 'Project':
+        firstPage.drawText(checkMark, { x: 393, y: 506, size: 12 });
+        break;
+      case 'Others':
+        firstPage.drawText(checkMark, { x: 222, y: 489, size: 12 });
+        firstPage.drawText(formData.otherAssessment, { x: 245, y: 460, ...fontSettings });
+        break;
+      default:
+        break;
+    }
+
+    if (formData.usedAITools) {
+      firstPage.drawText(checkMark, { x: 34, y: 230, size: 12 });
+    }
+
+    firstPage.drawText(formData.icPassport, { x: 125, y: 186, ...fontSettings });
+    firstPage.drawText(formData.date, { x: 300, y: 116, ...fontSettings });
+
+    if (formData.signature) {
+      const signatureBytes = await fetch(formData.signature).then((res) => res.arrayBuffer());
+      
+      let signatureImage;
+      if (formData.signature.includes('image/png')) {
+        signatureImage = await pdfDoc.embedPng(signatureBytes);
+      } else if (formData.signature.includes('image/jpeg')) {
+        signatureImage = await pdfDoc.embedJpg(signatureBytes);
+      }
+
+      if (signatureImage) {
+        // Change this line to use the new parameter! Make sure to parse it as a float.
+        const scaleValue = parseFloat(formData.signatureScale);
+        const scaledDims = signatureImage.scale(scaleValue);
+
+        firstPage.drawImage(signatureImage, {
+          x: 30,             
+          y: 122,             
+          width: scaledDims.width,
+          height: scaledDims.height,
+        });
+      }
+    }
+
     // D. List of Group Members (Page 2 Table)
     // Starting Y coordinate for the first row in the table
-    drawDebugGrid(firstPage);
+    //drawDebugGrid(secondPage);
 
-    const startY = 650; 
-    const rowHeight = 25; // Space between each row
+    const startY = 626; 
+    const rowHeight = 22; // Space between each row
 
-    formData.members.forEach((member, index) => {
+    /**formData.members.forEach((member, index) => {
       if (!member.name && !member.matric) return; // Skip empty rows
       
       const currentY = startY - (index * rowHeight);
       
-      secondPage.drawText(member.name, { x: 90, y: currentY, size: 10 });
-      secondPage.drawText(member.matric, { x: 300, y: currentY, size: 10 });
-      secondPage.drawText(member.ic, { x: 420, y: currentY, size: 10 });
-    });
+      secondPage.drawText(member.name, { x: 50, y: currentY, size: 10 });
+      secondPage.drawText(member.matric, { x: 265, y: currentY, size: 10 });
+      secondPage.drawText(member.ic, { x: 368, y: currentY, size: 10 });
+      if (formData.signature) {
+      const signatureBytes = await fetch(formData.signature).then((res) => res.arrayBuffer());
+      
+      let signatureImage;
+      if (formData.signature.includes('image/png')) {
+        signatureImage = await pdfDoc.embedPng(signatureBytes);
+      } else if (formData.signature.includes('image/jpeg')) {
+        signatureImage = await pdfDoc.embedJpg(signatureBytes);
+      }
+
+      if (signatureImage) {
+        // Change this line to use the new parameter! Make sure to parse it as a float.
+        const scaleValue = parseFloat(formData.signatureScale);
+        const scaledDims = signatureImage.scale(scaleValue);
+
+        firstPage.drawImage(signatureImage, {
+          x: 200,             
+          y: 220,             
+          width: scaledDims.width,
+          height: scaledDims.height,
+        });
+      }
+    }
+    });**/
+
+    for (let index = 0; index < formData.members.length; index++) {
+      const member = formData.members[index];
+      
+      if (!member.name && !member.matric) continue; // Skip empty rows
+      
+      const currentY = startY - (index * rowHeight);
+      
+      secondPage.drawText(member.name, { x: 50, y: currentY, size: 10 });
+      secondPage.drawText(member.matric, { x: 265, y: currentY, size: 10 });
+      secondPage.drawText(member.ic, { x: 368, y: currentY, size: 10 });
+
+      // --- EMBED MEMBER SIGNATURE ---
+      if (member.signature) {
+        const signatureBytes = await fetch(member.signature).then(res => res.arrayBuffer());
+        
+        let signatureImage;
+        if (member.signature.includes('image/png')) {
+          signatureImage = await pdfDoc.embedPng(signatureBytes);
+        } else if (member.signature.includes('image/jpeg')) {
+          signatureImage = await pdfDoc.embedJpg(signatureBytes);
+        }
+
+        if (signatureImage) {
+          const scaleValue = parseFloat(member.signatureScale);
+          const scaledDims = signatureImage.scale(scaleValue);
+
+          secondPage.drawImage(signatureImage, {
+            x: 490, // Adjust this X coordinate using your grid! (Target the 5th column)
+            y: currentY-7, // Offset Y slightly so it centers vertically on the line
+            width: scaledDims.width,
+            height: scaledDims.height,
+          });
+        }
+      }
+    }
 
     // Serialize and Download
     const pdfBytes = await pdfDoc.save();
