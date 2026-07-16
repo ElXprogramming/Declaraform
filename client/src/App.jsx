@@ -24,7 +24,7 @@ export default function App() {
           gravity={0.01}
           friction={0.9975}
           wallBounce={0.95}
-          followCursor={true}
+          followCursor={false}
           colors={[0xffffff, 0x888888, 0x4f46e5]} // Added: White, Grey, and Indigo
         />
       </div>

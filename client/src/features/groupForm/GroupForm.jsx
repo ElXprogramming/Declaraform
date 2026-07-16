@@ -48,10 +48,10 @@ export default function GroupForm() {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 h-[90vh]">
+    <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:h-[90vh] min-h-screen lg:min-h-0">
       
       {/* LEFT COLUMN: The Form */}
-      <div className="lg:col-span-2 overflow-y-auto pr-4 pb-20 custom-scrollbar">
+      <div className="lg:col-span-2 overflow-y-auto pr-4 pb-20 custom-scrollbar max-h-[60vh] lg:max-h-full">
         <form className="space-y-6">
           <h2 className="text-xl font-bold text-gray-700 border-b pb-2 mb-4">A. Leader's Information</h2>
           
@@ -130,6 +130,7 @@ export default function GroupForm() {
                   onChange={handleChange}
                   className="w-full mt-2 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                 />
+  // --- LIVE PREVIEW EFFECT ---
                 <p className="text-xs text-gray-500 mt-1">
                   Slide left to make it smaller, right to make it larger.
                 </p>
@@ -217,18 +218,33 @@ export default function GroupForm() {
       </div>
 
       {/* RIGHT COLUMN: The PDF Preview */}
-      <div className="lg:col-span-3 flex flex-col bg-gray-200 rounded-xl overflow-hidden border border-gray-300 shadow-inner">
+      <div className="lg:col-span-3 flex flex-col bg-gray-200 rounded-xl overflow-hidden border border-gray-300 shadow-inner min-h-[500px] lg:min-h-0">
         <div className="bg-gray-800 text-white p-3 flex justify-between items-center">
           <span className="text-sm font-semibold tracking-wide">Live Preview</span>
-          {previewUrl && (
-            <a 
-              href={previewUrl} 
-              download={`Group_Declaration_${formData.leaderMatric}.pdf`}
-              className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold py-1 px-4 rounded transition-colors"
-            >
-              Download PDF
-            </a>
-          )}
+          
+          <div className="flex gap-2">
+            {previewUrl && (
+              <>
+                {/* New button for mobile users to bypass the iframe bug */}
+                <a 
+                  href={previewUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="bg-gray-600 hover:bg-gray-500 text-white text-sm font-bold py-1 px-3 rounded transition-colors lg:hidden"
+                >
+                  Full Screen
+                </a>
+                
+                <a 
+                  href={previewUrl} 
+                  download={`Group_Declaration_${formData.leaderMatric}.pdf`}
+                  className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold py-1 px-3 rounded transition-colors"
+                >
+                  Download PDF
+                </a>
+              </>
+            )}
+          </div>
         </div>
         
         <div className="flex-grow w-full h-full relative">
