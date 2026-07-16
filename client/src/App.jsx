@@ -17,9 +17,16 @@ export default function App() {
   return (
     <div className="relative min-h-screen text-gray-800 p-4 md:p-8 overflow-hidden bg-gray-900">
       
-      {/* Only render the Ballpit if the DOM is mounted */}
-      <div className="absolute inset-0 z-0">
-        {/*{isMounted && <Ballpit />}*/}
+      {/* 3. The Background Layer */}
+      <div className="absolute inset-0 z-0 overflow-hidden bg-gray-900">
+        <Ballpit
+          count={100}
+          gravity={0.01}
+          friction={0.9975}
+          wallBounce={0.95}
+          followCursor={true}
+          colors={[0xffffff, 0x888888, 0x4f46e5]} // Added: White, Grey, and Indigo
+        />
       </div>
 
       {/* 4. The Content Layer: Add relative and z-10 so it sits on top of the balls */}

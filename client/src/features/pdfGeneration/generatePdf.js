@@ -17,7 +17,6 @@ const drawDebugGrid = (page) => {
 
 export const generateIndividualForm = async (formData) => {
   try {
-    // Fetch the blank template
     
     const url = '/templates/declarationFormIndividual.pdf';
     const existingPdfBytes = await fetch(url).then(res => res.arrayBuffer());
