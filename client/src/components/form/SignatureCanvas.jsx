@@ -25,9 +25,7 @@ export default function SignatureCanvas({ onSaveSignature }) {
     e.preventDefault(); 
     
     if (activeTab === 'draw') {
-      // Check if the canvas reference exists and isn't empty
       if (sigCanvas.current && !sigCanvas.current.isEmpty()) {
-        // Use the standard toDataURL instead of getTrimmedCanvas to prevent dimension errors
         const signatureData = sigCanvas.current.toDataURL('image/png');
         onSaveSignature(signatureData);
       } else {
@@ -43,18 +41,18 @@ export default function SignatureCanvas({ onSaveSignature }) {
   };
 
   return (
-    <div className="border border-gray-300 rounded-lg p-4 bg-gray-50 mt-4">
-      <div className="flex space-x-4 mb-4 border-b pb-2">
+    <div className="border border-slate-700 rounded-lg p-4 bg-slate-800 mt-4">
+      <div className="flex space-x-4 mb-4 border-b border-slate-700 pb-2">
         <button
           type="button"
-          className={`font-semibold text-sm ${activeTab === 'draw' ? 'text-blue-600' : 'text-gray-500'}`}
+          className={`font-semibold text-sm ${activeTab === 'draw' ? 'text-teal-400' : 'text-slate-400 hover:text-slate-200'}`}
           onClick={() => setActiveTab('draw')}
         >
           Draw Signature
         </button>
         <button
           type="button"
-          className={`font-semibold text-sm ${activeTab === 'upload' ? 'text-blue-600' : 'text-gray-500'}`}
+          className={`font-semibold text-sm ${activeTab === 'upload' ? 'text-teal-400' : 'text-slate-400 hover:text-slate-200'}`}
           onClick={() => setActiveTab('upload')}
         >
           Upload Image
@@ -63,7 +61,8 @@ export default function SignatureCanvas({ onSaveSignature }) {
 
       {activeTab === 'draw' ? (
         <div>
-          <div className="border bg-white rounded-md mb-2">
+          {/* Keep the canvas pad itself white so the black pen is visible */}
+          <div className="border border-slate-600 bg-white rounded-md mb-2 overflow-hidden">
             <SignaturePad
               ref={sigCanvas}
               canvasProps={{
@@ -71,21 +70,21 @@ export default function SignatureCanvas({ onSaveSignature }) {
               }}
             />
           </div>
-          <button type="button" onClick={clearCanvas} className="text-xs text-red-500 hover:underline">
+          <button type="button" onClick={clearCanvas} className="text-xs text-red-400 hover:text-red-300 hover:underline">
             Clear
           </button>
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md h-40 bg-white">
-          <input type="file" accept="image/png, image/jpeg" onChange={handleFileUpload} className="text-sm text-gray-500" />
-          {uploadedImage && <p className="text-xs text-green-600 mt-2">Image loaded successfully.</p>}
+        <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-600 rounded-md h-40 bg-slate-900/50">
+          <input type="file" accept="image/png, image/jpeg" onChange={handleFileUpload} className="text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-slate-700 file:text-slate-200 hover:file:bg-slate-600" />
+          {uploadedImage && <p className="text-xs text-teal-400 mt-2">Image loaded successfully.</p>}
         </div>
       )}
 
       <button
         type="button"
         onClick={saveSignature}
-        className="mt-4 bg-gray-800 text-white text-sm px-4 py-2 rounded hover:bg-gray-700 transition-colors"
+        className="mt-4 bg-slate-700 text-white text-sm px-4 py-2 rounded hover:bg-slate-600 transition-colors shadow-sm"
       >
         Confirm Signature
       </button>
