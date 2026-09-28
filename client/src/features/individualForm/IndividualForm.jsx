@@ -22,13 +22,12 @@ export default function IndividualForm() {
 
   // --- LIVE PREVIEW EFFECT ---
   useEffect(() => {
-    // We use a timeout so it doesn't generate on every single keystroke
     const timer = setTimeout(async () => {
       const url = await generateIndividualForm(formData);
       setPreviewUrl(url);
-    }, 500); // Wait 500ms after you stop typing to generate
+    }, 500); 
 
-    return () => clearTimeout(timer); // Cleanup if typing continues
+    return () => clearTimeout(timer); 
   }, [formData]); 
   // ---------------------------
 
@@ -41,10 +40,10 @@ export default function IndividualForm() {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[80vh]">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:h-[80vh] min-h-screen lg:min-h-0">
       
       {/* LEFT COLUMN: The Form */}
-      <div className="overflow-y-auto pr-4 pb-20 custom-scrollbar">
+      <div className="overflow-y-auto pr-4 pb-20 custom-scrollbar max-h-[60vh] lg:max-h-full">
         <form className="space-y-6">
           <h2 className="text-xl font-bold text-gray-700 border-b pb-2 mb-4">A. Student's Information</h2>
           
@@ -130,18 +129,32 @@ export default function IndividualForm() {
       </div>
 
       {/* RIGHT COLUMN: The PDF Preview */}
-      <div className="flex flex-col bg-gray-200 rounded-xl overflow-hidden border border-gray-300 shadow-inner">
+      <div className="flex flex-col bg-gray-200 rounded-xl overflow-hidden border border-gray-300 shadow-inner min-h-[500px] lg:min-h-0">
         <div className="bg-gray-800 text-white p-3 flex justify-between items-center">
           <span className="text-sm font-semibold tracking-wide">Live Preview</span>
-          {previewUrl && (
-            <a 
-              href={previewUrl} 
-              download={`Declaration_${formData.matricNo}.pdf`}
-              className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold py-1 px-4 rounded transition-colors"
-            >
-              Download PDF
-            </a>
-          )}
+          
+          <div className="flex gap-2">
+            {previewUrl && (
+              <>
+                <a 
+                  href={previewUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="bg-gray-600 hover:bg-gray-500 text-white text-sm font-bold py-1 px-3 rounded transition-colors lg:hidden"
+                >
+                  Full Screen
+                </a>
+                <a 
+                  href={previewUrl} 
+                  download={`Declaration_${formData.matricNo}.pdf`}
+                  className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold py-1 px-4 rounded transition-colors"
+                >
+                  Download PDF
+                </a>
+              </>
+            )}
+          </div>
+          
         </div>
         
         <div className="flex-grow w-full h-full relative">

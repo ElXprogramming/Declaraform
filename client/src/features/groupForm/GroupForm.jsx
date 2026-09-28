@@ -130,7 +130,6 @@ export default function GroupForm() {
                   onChange={handleChange}
                   className="w-full mt-2 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                 />
-  // --- LIVE PREVIEW EFFECT ---
                 <p className="text-xs text-gray-500 mt-1">
                   Slide left to make it smaller, right to make it larger.
                 </p>
