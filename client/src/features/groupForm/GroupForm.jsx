@@ -10,10 +10,11 @@ export default function GroupForm() {
     leaderName: '',
     leaderMatric: '',
     leaderPhoneEmail: '',
-    leaderIC: '',
+    icPassport: '',       // <-- Changed from leaderIC
     courseName: '',
     courseCode: '',
-    assessmentType: '',
+    assessmentType: 'Assignment', // <-- Added default to match IndividualForm
+    otherAssessment: '',          // <-- Added to prevent undefined crashes in the 'Others' category
     usedAITools: false,
     signature: null,
     signatureScale: 0.25,
@@ -48,10 +49,10 @@ export default function GroupForm() {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:h-[90vh] min-h-screen lg:min-h-0">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:h-[90vh] min-h-screen lg:min-h-0">
       
       {/* LEFT COLUMN: The Form */}
-      <div className="lg:col-span-2 overflow-y-auto pr-4 pb-20 custom-scrollbar max-h-[60vh] lg:max-h-full">
+      <div className="overflow-y-auto pr-4 pb-20 custom-scrollbar max-h-[60vh] lg:max-h-full">
         <form className="space-y-6">
           <h2 className="text-xl font-bold text-gray-700 border-b pb-2 mb-4">A. Leader's Information</h2>
           
@@ -217,7 +218,7 @@ export default function GroupForm() {
       </div>
 
       {/* RIGHT COLUMN: The PDF Preview */}
-      <div className="lg:col-span-3 flex flex-col bg-gray-200 rounded-xl overflow-hidden border border-gray-300 shadow-inner min-h-[500px] lg:min-h-0">
+      <div className="flex flex-col bg-gray-200 rounded-xl overflow-hidden border border-gray-300 shadow-inner min-h-[500px] lg:min-h-0">
         <div className="bg-gray-800 text-white p-3 flex justify-between items-center">
           <span className="text-sm font-semibold tracking-wide">Live Preview</span>
           
