@@ -34,7 +34,7 @@ export default function App() {
           <h1 className="text-3xl font-extrabold text-white mb-2">
             UMS Declaration Form Filler
           </h1>
-          <p className="text-gray-200">Generate your asynchronous mode assessment forms instantly.</p>
+          <p className="text-gray-200">Generate your forms instantly.</p>
         </header>
 
         {/* Tab Navigation */}

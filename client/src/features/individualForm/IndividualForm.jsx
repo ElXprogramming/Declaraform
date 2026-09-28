@@ -15,7 +15,6 @@ export default function IndividualForm() {
     icPassport: '',
     date: new Date().toISOString().split('T')[0],
     signature: null,
-    signatureScale: 0.25,
   });
 
   const [previewUrl, setPreviewUrl] = useState(null);
@@ -104,19 +103,10 @@ export default function IndividualForm() {
               <div className="bg-white p-2 border rounded inline-block">
                 <img src={formData.signature} alt="Signature Preview" className="h-20 object-contain" />
               </div>
-              <div className="mt-4 max-w-sm">
-                <label className="block text-sm font-medium text-gray-700">
-                  Adjust Signature Size: {formData.signatureScale}x
-                </label>
-                <input 
-                  type="range" name="signatureScale" min="0.05" max="1.5" step="0.05" 
-                  value={formData.signatureScale} onChange={handleChange}
-                  className="w-full mt-2 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                />
-              </div>
+              
               <button 
                 type="button" 
-                onClick={() => setFormData({...formData, signature: null, signatureScale: 0.25})} 
+                onClick={() => setFormData({...formData, signature: null})} 
                 className="text-xs text-red-500 mt-4 hover:underline font-medium"
               >
                 Remove Signature
@@ -174,4 +164,4 @@ export default function IndividualForm() {
 
     </div>
   );
-}
+}1

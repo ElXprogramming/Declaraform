@@ -17,10 +17,9 @@ export default function GroupForm() {
     otherAssessment: '',          // <-- Added to prevent undefined crashes in the 'Others' category
     usedAITools: false,
     signature: null,
-    signatureScale: 0.25,
     date: new Date().toISOString().split('T')[0],
     // Initialize 10 empty members for the table
-    members: Array(10).fill({ name: '', matric: '', ic: '', signature: null, signatureScale: 0.13 })
+    members: Array(10).fill({ name: '', matric: '', ic: ''})
   });
 
   // --- LIVE PREVIEW EFFECT ---
@@ -116,25 +115,7 @@ export default function GroupForm() {
                 <img src={formData.signature} alt="Signature Preview" className="h-20 object-contain" />
               </div>
               
-              {/* Scale Slider */}
-              <div className="mt-4 max-w-sm">
-                <label className="block text-sm font-medium text-gray-700">
-                  Adjust Signature Size on PDF: {formData.signatureScale}x
-                </label>
-                <input 
-                  type="range" 
-                  name="signatureScale"
-                  min="0.05" 
-                  max="1.5" 
-                  step="0.05" 
-                  value={formData.signatureScale} 
-                  onChange={handleChange}
-                  className="w-full mt-2 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Slide left to make it smaller, right to make it larger.
-                </p>
-              </div>
+              
 
               <button 
                 type="button" 

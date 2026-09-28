@@ -80,9 +80,14 @@ export const generateIndividualForm = async (formData) => {
       }
 
       if (signatureImage) {
-        // Change this line to use the new parameter! Make sure to parse it as a float.
-        const scaleValue = parseFloat(formData.signatureScale);
-        const scaledDims = signatureImage.scale(scaleValue);
+        // Define the maximum fixed box size
+        const MAX_WIDTH = 150;
+        const MAX_HEIGHT = 35;
+        
+        // Get original dimensions and calculate the perfect scale to fit the box
+        const originalDims = signatureImage.scale(1);
+        const scale = Math.min(MAX_WIDTH / originalDims.width, MAX_HEIGHT / originalDims.height);
+        const scaledDims = signatureImage.scale(scale);
 
         firstPage.drawImage(signatureImage, {
           x: 30,             
@@ -168,13 +173,18 @@ export const generateGroupForm = async (formData) => {
       }
 
       if (signatureImage) {
-        // Change this line to use the new parameter! Make sure to parse it as a float.
-        const scaleValue = parseFloat(formData.signatureScale);
-        const scaledDims = signatureImage.scale(scaleValue);
+        // Define the maximum fixed box size
+        const MAX_WIDTH = 150;
+        const MAX_HEIGHT = 40;
+        
+        // Get original dimensions and calculate the perfect scale to fit the box
+        const originalDims = signatureImage.scale(1);
+        const scale = Math.min(MAX_WIDTH / originalDims.width, MAX_HEIGHT / originalDims.height);
+        const scaledDims = signatureImage.scale(scale);
 
         firstPage.drawImage(signatureImage, {
           x: 30,             
-          y: 122,             
+          y: 120,             
           width: scaledDims.width,
           height: scaledDims.height,
         });
@@ -244,12 +254,17 @@ export const generateGroupForm = async (formData) => {
         }
 
         if (signatureImage) {
-          const scaleValue = parseFloat(member.signatureScale);
-          const scaledDims = signatureImage.scale(scaleValue);
+          // Define a tiny box for the table row
+          const MAX_WIDTH = 60;
+          const MAX_HEIGHT = 18;
+          
+          const originalDims = signatureImage.scale(1);
+          const scale = Math.min(MAX_WIDTH / originalDims.width, MAX_HEIGHT / originalDims.height);
+          const scaledDims = signatureImage.scale(scale);
 
           secondPage.drawImage(signatureImage, {
-            x: 490, // Adjust this X coordinate using your grid! (Target the 5th column)
-            y: currentY-7, // Offset Y slightly so it centers vertically on the line
+            x: 490, 
+            y: currentY - 5, // Tweak this slightly if it floats too high/low off the line
             width: scaledDims.width,
             height: scaledDims.height,
           });
