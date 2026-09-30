@@ -244,18 +244,7 @@ export default function App() {
                 ))}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1.5">Name (Optional)</label>
-                  <input 
-                    type="text" 
-                    name="name" 
-                    value={feedback.name} 
-                    onChange={handleFeedbackChange} 
-                    className="w-full p-3 bg-slate-950 border border-slate-800 text-slate-200 placeholder-slate-600 rounded-xl focus:ring-1 focus:ring-teal-500 focus:border-teal-500 focus:outline-none transition-colors" 
-                    placeholder="John Doe" 
-                  />
-                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-1.5">Telegram or Email for reply (Optional)</label>
                   <input 
@@ -267,7 +256,7 @@ export default function App() {
                     placeholder="@username or email" 
                   />
                 </div>
-              </div>
+              
               
               <div className="mb-6">
                 <label className="block text-sm font-medium text-slate-300 mb-1.5">Message</label>
