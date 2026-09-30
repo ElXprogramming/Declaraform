@@ -206,7 +206,7 @@ export default function App() {
                 </div>
                 <h3 className="text-xl font-bold text-white mb-2 tracking-tight">Why it was built</h3>
                 <p className="text-slate-400 leading-relaxed text-sm">
-                  Declaraform was created to digitize the repetitive, time-consuming process of filling out academic declaration forms at Universiti Malaysia Sabah. It eliminates manual formatting, printing, and messy digital signature pasting by automating the entire workflow into a few simple clicks.
+                  Declaraform was created to digitize the repetitive, time-consuming process of filling out academic declaration forms for Computer Science Students at Universiti Malaysia Sabah. It eliminates manual formatting, printing, and messy digital signature pasting by automating the entire workflow into a few simple clicks.
                 </p>
               </div>
 
