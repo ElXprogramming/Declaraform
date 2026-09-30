@@ -6,6 +6,49 @@ import Navbar from './components/layout/Navbar';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('individual');
+  const [feedback, setFeedback] = useState({
+    name: '',
+    category: 'Bug Report', // Default active button
+    contact: '',
+    message: ''
+  });
+  const [formStatus, setFormStatus] = useState('idle');
+
+  const handleFeedbackChange = (e) => {
+    const { name, value } = e.target;
+    setFeedback(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleFeedbackSubmit = async (e) => {
+    e.preventDefault();
+    setFormStatus('submitting');
+    
+    const ENDPOINT_URL = "https://formspree.io/f/xqpajypz"; 
+
+    try {
+      const response = await fetch(ENDPOINT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({
+          Category: feedback.category,
+          Name: feedback.name || 'Not provided',
+          Contact: feedback.contact || 'Not provided',
+          Message: feedback.message,
+        })
+      });
+
+      if (response.ok) {
+        setFormStatus('success');
+        setFeedback({ name: '', category: 'Bug Report', contact: '', message: '' });
+        setTimeout(() => setFormStatus('idle'), 5000);
+      } else {
+        setFormStatus('error');
+      }
+    } catch (error) {
+      setFormStatus('error');
+    }
+  };
+
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -110,40 +153,67 @@ export default function App() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-            {/* The Purpose */}
-            <div className="bg-slate-900/80 backdrop-blur-md p-8 rounded-3xl border border-slate-800 shadow-xl text-left transition-transform hover:-translate-y-1">
-              <div className="bg-teal-500/10 w-14 h-14 rounded-2xl flex items-center justify-center mb-6 border border-teal-500/20 shadow-inner">
-                <svg className="w-7 h-7 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-              </div>
-              <h3 className="text-xl font-bold text-white mb-3 tracking-tight">Why it was built</h3>
-              <p className="text-slate-400 leading-relaxed text-sm">
-                Declaraform was created to digitize the repetitive, time-consuming process of filling out academic declaration forms for Computer Science Students at Universiti Malaysia Sabah. It eliminates manual formatting, printing, and messy digital signature pasting by automating the entire workflow into a few simple clicks.
+            
+            {/* LEFT COLUMN: Developer Info */}
+            <div className="md:col-span-1 bg-slate-900/80 backdrop-blur-md p-8 rounded-3x1 border border-slate-800 shadow-xl flex flex-col items-center justify-center text-center transition-transform hover:-translate-y-1 h-full">
+              
+              {/* Profile Picture */}
+              <img 
+                src="/profile.jpg" 
+                alt="Eldion Ryan Godius" 
+                className="w-36 h-36 md:w-40 md:h-40 rounded-full object-cover border-2 border-teal-500/50 shadow-[0_0_15px_rgba(20,184,166,0.2)] mb-5"
+              />
+              
+              {/* Name & Title */}
+              <h3 className="text-xl font-bold text-white tracking-tight leading-tight mb-2">
+                Eldion Ryan Godius
+              </h3>
+              <p className="text-slate-400 text-xs md:text-sm font-medium tracking-wide mb-6">
+                Software Engineering, Universiti Malaysia Sabah
               </p>
+              
+              {/* Badges Stacked */}
+              <div className="flex flex-col gap-3 items-center">
+                <span className="px-3 py-1 bg-teal-500/10 border border-teal-500/30 text-teal-400 text-xs font-bold rounded-md uppercase tracking-wider">
+                  Founder
+                </span>
+                
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold rounded-md">
+                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2L14.6 9.4L22 12L14.6 14.6L12 22L9.4 14.6L2 12L9.4 9.4L12 2ZM5.5 4.5L6.5 7L9 8L6.5 9L5.5 11.5L4.5 9L2 8L4.5 7L5.5 4.5Z" />
+                  </svg>
+                  Assisted by Gemini Pro
+                </div>
+              </div>
             </div>
 
-            {/* Privacy Declaration */}
-            <div className="bg-slate-900/80 backdrop-blur-md p-8 rounded-3xl border border-slate-800 shadow-xl text-left transition-transform hover:-translate-y-1">
-              <div className="bg-teal-500/10 w-14 h-14 rounded-2xl flex items-center justify-center mb-6 border border-teal-500/20 shadow-inner">
-                <svg className="w-7 h-7 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+            {/* RIGHT COLUMN: Stacked Info Cards */}
+            <div className="md:col-span-2 flex flex-col gap-6">
+              
+              {/* The Purpose */}
+              <div className="bg-slate-900/80 backdrop-blur-md p-8 rounded-3xl border border-slate-800 shadow-xl text-left transition-transform hover:-translate-x-1 flex-1">
+                <div className="bg-teal-500/10 w-12 h-12 rounded-2xl flex items-center justify-center mb-5 border border-teal-500/20 shadow-inner">
+                  <svg className="w-6 h-6 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2 tracking-tight">Why it was built</h3>
+                <p className="text-slate-400 leading-relaxed text-sm">
+                  Declaraform was created to digitize the repetitive, time-consuming process of filling out academic declaration forms at Universiti Malaysia Sabah. It eliminates manual formatting, printing, and messy digital signature pasting by automating the entire workflow into a few simple clicks.
+                </p>
               </div>
-              <h3 className="text-xl font-bold text-white mb-3 tracking-tight">Zero-Data Policy</h3>
-              <p className="text-slate-400 leading-relaxed text-sm">
-                Your data never leaves your device. This application runs 100% locally in your browser. Absolutely no personal information, matriculation numbers, or drawn signatures are ever uploaded to a server, tracked, or stored in a database. What happens on your device, stays on your device.
-              </p>
+
+              {/* Privacy Declaration */}
+              <div className="bg-slate-900/80 backdrop-blur-md p-8 rounded-3xl border border-slate-800 shadow-xl text-left transition-transform hover:-translate-x-1 flex-1">
+                <div className="bg-teal-500/10 w-12 h-12 rounded-2xl flex items-center justify-center mb-5 border border-teal-500/20 shadow-inner">
+                  <svg className="w-6 h-6 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2 tracking-tight">Zero-Data Policy</h3>
+                <p className="text-slate-400 leading-relaxed text-sm">
+                  Your data never leaves your device. This application runs 100% locally in your browser. Absolutely no personal information, matriculation numbers, or drawn signatures are ever uploaded to a server, tracked, or stored in a database. What happens on your device, stays on your device.
+                </p>
+              </div>
+
             </div>
 
-            {/* Developer Info */}
-            <div className="bg-slate-900/80 backdrop-blur-md p-8 rounded-3xl border border-slate-800 shadow-xl text-left transition-transform hover:-translate-y-1">
-              <div className="bg-teal-500/10 w-14 h-14 rounded-2xl flex items-center justify-center mb-6 border border-teal-500/20 shadow-inner">
-                <svg className="w-7 h-7 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
-              </div>
-              <h3 className="text-xl font-bold text-white mb-3 tracking-tight">The Developer</h3>
-              <p className="text-slate-400 leading-relaxed text-sm">
-                Developed by <span className="font-semibold text-slate-200">Eldion Ryan Godius</span>, a fellow student seeking to build practical software that solves real, everyday annoyances. 
-                <br /><br />
-                <span className="italic text-xs opacity-80">*Declaraform is an independent project and is not officially affiliated with the UMS administration.</span>
-              </p>
-            </div>
           </div>
         </section>
 
@@ -154,26 +224,79 @@ export default function App() {
             <h2 className="text-3xl font-bold text-white mb-2 tracking-tight">Get in Touch</h2>
             <p className="text-slate-400 text-sm mb-8">Found a bug or have a feature request? Let me know!</p>
             
-            <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <form onSubmit={handleFeedbackSubmit}>
+              
+              {/* Category Buttons */}
+              <div className="flex flex-wrap gap-3 mb-6">
+                {['Bug Report', 'Idea Suggestion', 'Other'].map(cat => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setFeedback({ ...feedback, category: cat })}
+                    className={`px-5 py-2 rounded-full text-sm font-semibold transition-colors border ${
+                      feedback.category === cat
+                        ? 'bg-teal-600/20 border-teal-500 text-teal-400'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-600'
+                    }`}
+                  >
+                    {cat === 'Bug Report' ? '🐛 ' : cat === 'Idea Suggestion' ? '💡 ' : '💬 '} {cat}
+                  </button>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1.5">Name</label>
-                  <input type="text" className="w-full p-3 bg-slate-950 border border-slate-700 text-slate-200 placeholder-slate-600 rounded-xl focus:ring-1 focus:ring-teal-500 focus:border-teal-500 focus:outline-none transition-colors" placeholder="John Doe" required />
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">Name (Optional)</label>
+                  <input 
+                    type="text" 
+                    name="name" 
+                    value={feedback.name} 
+                    onChange={handleFeedbackChange} 
+                    className="w-full p-3 bg-slate-950 border border-slate-800 text-slate-200 placeholder-slate-600 rounded-xl focus:ring-1 focus:ring-teal-500 focus:border-teal-500 focus:outline-none transition-colors" 
+                    placeholder="John Doe" 
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1.5">Email</label>
-                  <input type="email" className="w-full p-3 bg-slate-950 border border-slate-700 text-slate-200 placeholder-slate-600 rounded-xl focus:ring-1 focus:ring-teal-500 focus:border-teal-500 focus:outline-none transition-colors" placeholder="john@example.com" required />
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">Telegram or Email for reply (Optional)</label>
+                  <input 
+                    type="text" 
+                    name="contact" 
+                    value={feedback.contact} 
+                    onChange={handleFeedbackChange} 
+                    className="w-full p-3 bg-slate-950 border border-slate-800 text-slate-200 placeholder-slate-600 rounded-xl focus:ring-1 focus:ring-teal-500 focus:border-teal-500 focus:outline-none transition-colors" 
+                    placeholder="@username or email" 
+                  />
                 </div>
               </div>
               
-              <div>
+              <div className="mb-6">
                 <label className="block text-sm font-medium text-slate-300 mb-1.5">Message</label>
-                <textarea rows="5" className="w-full p-3 bg-slate-950 border border-slate-700 text-slate-200 placeholder-slate-600 rounded-xl focus:ring-1 focus:ring-teal-500 focus:border-teal-500 focus:outline-none custom-scrollbar transition-colors" placeholder="Tell me what you think..." required></textarea>
+                <textarea 
+                  name="message" 
+                  value={feedback.message} 
+                  onChange={handleFeedbackChange} 
+                  rows="5" 
+                  className="w-full p-3 bg-slate-950 border border-slate-800 text-slate-200 placeholder-slate-600 rounded-xl focus:ring-1 focus:ring-teal-500 focus:border-teal-500 focus:outline-none custom-scrollbar transition-colors" 
+                  placeholder="Tell me what you think..." 
+                  required
+                ></textarea>
               </div>
               
-              <button type="submit" className="w-full bg-teal-600 hover:bg-teal-500 text-white font-bold py-3.5 px-4 rounded-xl transition-colors shadow-lg shadow-teal-500/20">
-                Send Feedback
+              <button 
+                type="submit" 
+                disabled={formStatus === 'submitting'}
+                className="w-full bg-teal-600 hover:bg-teal-500 text-white font-bold py-3.5 px-4 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {formStatus === 'submitting' ? 'Sending...' : 'Send Feedback'}
               </button>
+
+              {/* Status Messages */}
+              {formStatus === 'success' && (
+                <p className="text-teal-400 text-sm text-center font-medium mt-3">✨ Thank you! Your feedback has been sent.</p>
+              )}
+              {formStatus === 'error' && (
+                <p className="text-red-400 text-sm text-center font-medium mt-3">Oops! Something went wrong. Please try again later.</p>
+              )}
             </form>
           </div>
         </section>
