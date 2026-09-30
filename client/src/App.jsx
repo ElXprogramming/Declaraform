@@ -24,12 +24,14 @@ export default function App() {
     e.preventDefault();
     setFormStatus('submitting');
     
-    const ENDPOINT_URL = "https://formspree.io/f/xqpajypz"; 
+    // PASTE YOUR GOOGLE SCRIPT URL HERE:
+    const ENDPOINT_URL = "https://script.google.com/macros/s/AKfycbzKn_G_BWaegCu4hmbQthgPWBINlKU2tWUXbgUCQlZg-HOyJQYV8Mo484CiBHuSqirfQw/exec"; 
 
     try {
       const response = await fetch(ENDPOINT_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        // We use text/plain to bypass CORS preflight errors, the Google Script still parses it as JSON
+        headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({
           Category: feedback.category,
           Name: feedback.name || 'Not provided',
@@ -38,14 +40,13 @@ export default function App() {
         })
       });
 
-      if (response.ok) {
-        setFormStatus('success');
-        setFeedback({ name: '', category: 'Bug Report', contact: '', message: '' });
-        setTimeout(() => setFormStatus('idle'), 5000);
-      } else {
-        setFormStatus('error');
-      }
+      // Google redirects the request, so we just assume success if it didn't throw an error
+      setFormStatus('success');
+      setFeedback({ name: '', category: 'Bug Report', contact: '', message: '' });
+      setTimeout(() => setFormStatus('idle'), 5000);
+      
     } catch (error) {
+      console.error("Feedback error:", error);
       setFormStatus('error');
     }
   };
