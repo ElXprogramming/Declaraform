@@ -280,4 +280,27 @@ export const generateGroupForm = async (formData) => {
   } catch (error) {
     console.error("Error generating Group PDF:", error);
   }
+  
+};
+
+export const mergeMultiplePdfs = async (fileList) => {
+  try {
+    const mergedPdf = await PDFDocument.create();
+
+    for (const file of fileList) {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await PDFDocument.load(arrayBuffer);
+      
+      const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+      copiedPages.forEach((page) => mergedPdf.addPage(page));
+    }
+
+    const pdfBytes = await mergedPdf.save();
+    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+    return URL.createObjectURL(blob);
+
+  } catch (error) {
+    console.error("Error merging PDFs:", error);
+    throw error;
+  }
 };

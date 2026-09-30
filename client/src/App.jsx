@@ -3,12 +3,13 @@ import IndividualForm from './features/individualForm/IndividualForm';
 import GroupForm from './features/groupForm/GroupForm';
 import DotGrid from './components/backgrounds/DotGrid';
 import Navbar from './components/layout/Navbar';
+import PdfMerger from './features/pdfMerger/PdfMerger';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('individual');
   const [feedback, setFeedback] = useState({
     name: '',
-    category: 'Bug Report', // Default active button
+    category: 'Bug Report', 
     contact: '',
     message: ''
   });
@@ -71,8 +72,8 @@ export default function App() {
         />
       </div>
 
-      {/* 2. Global Navbar */}
-      <Navbar />
+      {/* 2. Global Navbar (Prop properly passed here) */}
+      <Navbar setActiveTab={setActiveTab} />
 
       {/* 3. Scrollable Content Layer */}
       <div className="relative z-10 w-full pt-24 pb-12">
@@ -80,7 +81,6 @@ export default function App() {
         {/* --- SECTION: HERO (Landing Page) --- */}
         <section id="hero" className="max-w-[1400px] mx-auto px-4 md:px-8 min-h-[75vh] flex flex-col justify-center items-center text-center">
           
-          {/* Centered Graphic Container - Styled like a wide pill */}
           <div className="mb-8 p-4 md:px-4 md:py-2 bg-slate-900/50 backdrop-blur-sm rounded-[3rem] border border-slate-800 inline-block shadow-2xl">
             <img src="/logo.png" alt="Declaraform" className="h-24 md:h-40 w-auto object-contain drop-shadow-lg" />
           </div>
@@ -114,6 +114,7 @@ export default function App() {
             <p className="text-slate-400">Fill in your details below.</p>
           </header>
 
+          {/* Corrected Tab Bar with all 3 buttons */}
           <div className="flex justify-center mb-6 border-b border-slate-700">
             <button
               className={`px-6 py-3 font-semibold text-sm transition-colors ${
@@ -135,10 +136,22 @@ export default function App() {
             >
               Group Form
             </button>
+            <button
+              className={`px-6 py-3 font-semibold text-sm transition-colors ${
+                activeTab === 'merge'
+                  ? 'border-b-2 border-teal-500 text-teal-400 drop-shadow'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+              onClick={() => setActiveTab('merge')}
+            >
+              Merge PDFs
+            </button>
           </div>
 
           <main className="bg-slate-900/80 backdrop-blur-md p-6 md:p-8 rounded-2xl shadow-2xl border border-slate-800">
-            {activeTab === 'individual' ? <IndividualForm /> : <GroupForm />}
+            {activeTab === 'individual' && <IndividualForm />}
+            {activeTab === 'group' && <GroupForm />}
+            {activeTab === 'merge' && <PdfMerger />}
           </main>
         </section>
 
@@ -157,14 +170,12 @@ export default function App() {
             {/* LEFT COLUMN: Developer Info */}
             <div className="md:col-span-1 bg-slate-900/80 backdrop-blur-md p-8 rounded-3x1 border border-slate-800 shadow-xl flex flex-col items-center justify-center text-center transition-transform hover:-translate-y-1 h-full">
               
-              {/* Profile Picture */}
               <img 
                 src="/profile.jpg" 
                 alt="Eldion Ryan Godius" 
                 className="w-36 h-36 md:w-40 md:h-40 rounded-full object-cover border-2 border-teal-500/50 shadow-[0_0_15px_rgba(20,184,166,0.2)] mb-5"
               />
               
-              {/* Name & Title */}
               <h3 className="text-xl font-bold text-white tracking-tight leading-tight mb-2">
                 Eldion Ryan Godius
               </h3>
@@ -172,7 +183,6 @@ export default function App() {
                 Software Engineering, Universiti Malaysia Sabah
               </p>
               
-              {/* Badges Stacked */}
               <div className="flex flex-col gap-3 items-center">
                 <span className="px-3 py-1 bg-teal-500/10 border border-teal-500/30 text-teal-400 text-xs font-bold rounded-md uppercase tracking-wider">
                   Founder
@@ -190,7 +200,6 @@ export default function App() {
             {/* RIGHT COLUMN: Stacked Info Cards */}
             <div className="md:col-span-2 flex flex-col gap-6">
               
-              {/* The Purpose */}
               <div className="bg-slate-900/80 backdrop-blur-md p-8 rounded-3xl border border-slate-800 shadow-xl text-left transition-transform hover:-translate-x-1 flex-1">
                 <div className="bg-teal-500/10 w-12 h-12 rounded-2xl flex items-center justify-center mb-5 border border-teal-500/20 shadow-inner">
                   <svg className="w-6 h-6 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
@@ -201,7 +210,6 @@ export default function App() {
                 </p>
               </div>
 
-              {/* Privacy Declaration */}
               <div className="bg-slate-900/80 backdrop-blur-md p-8 rounded-3xl border border-slate-800 shadow-xl text-left transition-transform hover:-translate-x-1 flex-1">
                 <div className="bg-teal-500/10 w-12 h-12 rounded-2xl flex items-center justify-center mb-5 border border-teal-500/20 shadow-inner">
                   <svg className="w-6 h-6 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
@@ -245,7 +253,7 @@ export default function App() {
               </div>
 
 
-                <div>
+                <div className="mb-5">
                   <label className="block text-sm font-medium text-slate-300 mb-1.5">Telegram or Email for reply (Optional)</label>
                   <input 
                     type="text" 
