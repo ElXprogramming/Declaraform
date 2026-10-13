@@ -6,12 +6,11 @@ const NAV_LINKS = [
   { id: 'contact', label: 'Contact' },
 ];
 
-// Pass setActiveTab as a prop
 export default function Navbar({ setActiveTab }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState('hero');
 
-  // Compact, more solid navbar once the user scrolls away from the top.
+  // Compact, more solid navbar once the user scrolls away from the top on desktop.
   useEffect(() => {
     const onScroll = () => setIsScrolled(window.scrollY > 20);
     onScroll();
@@ -19,7 +18,7 @@ export default function Navbar({ setActiveTab }) {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Highlight the link of the section currently in the middle of the viewport.
+  // Highlight the link of the section currently in the middle of the viewport on desktop.
   useEffect(() => {
     const sections = ['hero', ...NAV_LINKS.map(l => l.id)]
       .map(id => document.getElementById(id))
@@ -41,8 +40,8 @@ export default function Navbar({ setActiveTab }) {
   }, []);
 
   return (
-    <nav
-      className={`fixed top-0 left-0 w-full backdrop-blur-md border-b z-50 transition-all duration-300 ${
+    <header
+      className={`hidden md:block fixed top-0 left-0 w-full backdrop-blur-md border-b z-40 transition-all duration-300 ${
         isScrolled
           ? 'bg-slate-950/95 border-slate-700/80 shadow-lg shadow-black/30'
           : 'bg-slate-950/90 border-slate-800 shadow-sm'
@@ -50,20 +49,26 @@ export default function Navbar({ setActiveTab }) {
     >
       <div
         className={`max-w-[1400px] mx-auto px-4 md:px-8 flex justify-between items-center transition-all duration-300 ${
-          isScrolled ? 'py-2' : 'py-4'
+          isScrolled ? 'py-2 md:py-2.5' : 'py-3 md:py-4'
         }`}
       >
-        <a href="#hero" className="flex items-center transition-opacity hover:opacity-80">
+        {/* Logo */}
+        <a 
+          href="#hero" 
+          className="flex items-center transition-opacity hover:opacity-85"
+          aria-label="Declaraform Home"
+        >
           <img
             src="/logo.png"
             alt="Declaraform Logo"
             className={`w-auto object-contain transition-all duration-300 ${
-              isScrolled ? 'h-8 md:h-10' : 'h-10 md:h-12'
+              isScrolled ? 'h-8 md:h-10' : 'h-9 md:h-12'
             }`}
           />
         </a>
 
-        <div className="flex items-center gap-5 md:gap-8 text-sm font-semibold text-slate-300">
+        {/* Desktop Navigation Links */}
+        <nav aria-label="Desktop Navigation" className="flex items-center gap-5 md:gap-8 text-sm font-semibold text-slate-300">
           {NAV_LINKS.map(link => {
             const isActive = activeSection === link.id;
             return (
@@ -72,7 +77,7 @@ export default function Navbar({ setActiveTab }) {
                 href={`#${link.id}`}
                 onClick={link.tab ? () => setActiveTab(link.tab) : undefined}
                 aria-current={isActive ? 'true' : undefined}
-                className={`relative transition-colors hidden md:block hover:text-teal-400 ${
+                className={`relative transition-colors hover:text-teal-400 ${
                   isActive ? 'text-teal-400' : ''
                 }`}
               >
@@ -87,7 +92,7 @@ export default function Navbar({ setActiveTab }) {
             );
           })}
           
-          {/* Changed from inactive span to a functioning anchor tag */}
+          {/* Desktop Merge PDF Pill */}
           <a 
             href="#generator" 
             onClick={() => setActiveTab('merge')}
@@ -96,8 +101,8 @@ export default function Navbar({ setActiveTab }) {
             <span className="w-1.5 h-1.5 rounded-full bg-teal-400 shadow-[0_0_8px_rgba(45,212,191,0.8)]"></span>
             Merge PDF
           </a>
-        </div>
+        </nav>
       </div>
-    </nav>
+    </header>
   );
 }

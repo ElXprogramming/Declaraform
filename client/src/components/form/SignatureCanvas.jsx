@@ -66,7 +66,7 @@ export default function SignatureCanvas({ onSaveSignature }) {
             <SignaturePad
               ref={sigCanvas}
               canvasProps={{
-                className: 'signature-canvas w-full h-40 rounded-md cursor-crosshair'
+                className: 'signature-canvas w-full h-40 rounded-md cursor-crosshair touch-none'
               }}
             />
           </div>

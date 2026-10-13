@@ -20,7 +20,8 @@ export default function useScrollAnimations(scopeRef) {
 
     const mm = gsap.matchMedia();
 
-    mm.add('(prefers-reduced-motion: no-preference)', () => {
+    // Desktop: full scroll reveal with ScrollTrigger
+    mm.add('(min-width: 768px) and (prefers-reduced-motion: no-preference)', () => {
       // Hero: plays immediately since it is already on screen.
       gsap.from('[data-hero]', {
         opacity: 0,
@@ -46,10 +47,20 @@ export default function useScrollAnimations(scopeRef) {
             ease: 'power3.out',
             stagger: 0.12,
             overwrite: true,
-            // Remove inline transforms afterwards so they can't interfere with
-            // hover effects (e.g. hover:-translate-y-1) or layout.
             clearProps: 'transform,opacity',
           }),
+      });
+    }, scopeRef);
+
+    // Mobile: quick entrance for hero without hiding tabbed sections
+    mm.add('(max-width: 767px) and (prefers-reduced-motion: no-preference)', () => {
+      gsap.from('[data-hero]', {
+        opacity: 0,
+        y: 20,
+        duration: 0.6,
+        ease: 'power3.out',
+        stagger: 0.1,
+        clearProps: 'transform,opacity',
       });
     }, scopeRef);
 

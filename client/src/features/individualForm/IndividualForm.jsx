@@ -25,13 +25,24 @@ export default function IndividualForm() {
   );
 
   const [previewUrl, setPreviewUrl] = useState(null);
+  const prevUrlRef = React.useRef(null);
 
   useEffect(() => {
+    let isCancelled = false;
     const timer = setTimeout(async () => {
       const url = await generateIndividualForm(formData);
-      setPreviewUrl(url);
+      if (!isCancelled && url) {
+        if (prevUrlRef.current && prevUrlRef.current !== url) {
+          URL.revokeObjectURL(prevUrlRef.current);
+        }
+        prevUrlRef.current = url;
+        setPreviewUrl(url);
+      }
     }, 500); 
-    return () => clearTimeout(timer); 
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    }; 
   }, [formData]); 
 
   const handleChange = (e) => {
@@ -42,12 +53,44 @@ export default function IndividualForm() {
     }));
   };
 
+  const [mobileTab, setMobileTab] = useState('form');
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:h-[80vh] min-h-screen lg:min-h-0">
-      
-      {/* LEFT COLUMN: The Form */}
-      <div className="overflow-y-auto pr-4 pb-20 custom-scrollbar max-h-[60vh] lg:max-h-full">
-        <form className="space-y-6">
+    <div>
+      {/* Mobile-only Segmented Sub-Tab Switcher */}
+      <div className="lg:hidden flex bg-slate-950/90 p-1.5 rounded-2xl mb-5 border border-slate-800 shadow-inner">
+        <button
+          type="button"
+          onClick={() => setMobileTab('form')}
+          className={`flex-1 py-2.5 px-3 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${
+            mobileTab === 'form'
+              ? 'bg-teal-500 text-slate-950 shadow-md shadow-teal-500/20'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+          <span>Fill Form</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileTab('preview')}
+          className={`flex-1 py-2.5 px-3 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${
+            mobileTab === 'preview'
+              ? 'bg-teal-500 text-slate-950 shadow-md shadow-teal-500/20'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+          <span>Preview PDF</span>
+          {previewUrl && <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />}
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:h-[80vh] min-h-0">
+        
+        {/* LEFT COLUMN: The Form */}
+        <div className={`overflow-y-auto lg:pr-4 pb-8 custom-scrollbar lg:max-h-full ${mobileTab === 'form' ? 'block' : 'hidden lg:block'}`}>
+          <form className="space-y-6">
           <h2 className="text-xl font-bold text-slate-100 border-b border-slate-700 pb-2 mb-4">A. Student's Information</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -119,13 +162,34 @@ export default function IndividualForm() {
           ) : (
             <SignatureCanvas onSaveSignature={(sigData) => setFormData({...formData, signature: sigData})} />
           )}
+
+          {/* Mobile Action to Switch to Preview */}
+          <div className="pt-2 lg:hidden">
+            <button
+              type="button"
+              onClick={() => setMobileTab('preview')}
+              className="w-full bg-teal-600 hover:bg-teal-500 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-teal-500/20 flex items-center justify-center gap-2 text-sm"
+            >
+              <span>View Preview & Download PDF</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+            </button>
+          </div>
         </form>
       </div>
 
       {/* RIGHT COLUMN: The PDF Preview */}
-      <div className="flex flex-col bg-slate-950 rounded-xl overflow-hidden border border-slate-700 shadow-inner min-h-[500px] lg:min-h-0">
+      <div className={`flex flex-col bg-slate-950 rounded-xl overflow-hidden border border-slate-700 shadow-inner min-h-[480px] lg:min-h-0 ${mobileTab === 'preview' ? 'flex' : 'hidden lg:flex'}`}>
         <div className="bg-slate-800 text-slate-200 p-3 flex justify-between items-center border-b border-slate-700">
-          <span className="text-sm font-semibold tracking-wide">Live Preview</span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setMobileTab('form')}
+              className="lg:hidden text-xs text-teal-400 hover:text-teal-300 font-bold flex items-center gap-1 bg-slate-900 px-2 py-1 rounded"
+            >
+              ← Form
+            </button>
+            <span className="text-sm font-semibold tracking-wide">Live Preview</span>
+          </div>
           
           <div className="flex gap-2">
             {previewUrl && (
@@ -134,14 +198,14 @@ export default function IndividualForm() {
                   href={previewUrl} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="bg-slate-700 hover:bg-slate-600 text-white text-sm font-bold py-1 px-3 rounded transition-colors lg:hidden"
+                  className="bg-slate-700 hover:bg-slate-600 text-white text-xs md:text-sm font-bold py-1.5 px-3 rounded transition-colors"
                 >
                   Full Screen
                 </a>
                 <a 
                   href={previewUrl} 
-                  download={`Declaration_${formData.matricNo}.pdf`}
-                  className="bg-teal-600 hover:bg-teal-500 text-white text-sm font-bold py-1 px-4 rounded transition-colors shadow-md"
+                  download={`Declaration_${formData.matricNo || 'Form'}.pdf`}
+                  className="bg-teal-600 hover:bg-teal-500 text-white text-xs md:text-sm font-bold py-1.5 px-3 md:px-4 rounded transition-colors shadow-md"
                 >
                   Download PDF
                 </a>
@@ -151,21 +215,37 @@ export default function IndividualForm() {
           
         </div>
         
-        <div className="flex-grow w-full h-full relative">
+        {/* Page Info Bar */}
+        <div className="flex items-center justify-between px-3 py-2 bg-slate-900 border-b border-slate-800 text-xs shrink-0">
+          <span className="text-slate-400 font-medium">Page (1):</span>
+          <span className="px-2.5 py-1 rounded-lg font-bold text-xs bg-teal-500 text-slate-950 shadow-sm">
+            Single Page Form
+          </span>
+        </div>
+
+        {/* UNIFIED PREVIEW CONTAINER: Follows the group form mobile card layout on all screens */}
+        <div className="flex-grow min-h-0 overflow-y-auto custom-scrollbar p-2 sm:p-3 h-[65vh] lg:h-auto flex flex-col">
           {previewUrl ? (
-            <iframe 
-              src={`${previewUrl}#toolbar=0&navpanes=0&view=FitH`} 
-              className="absolute inset-0 w-full h-full rounded-b-xl"
-              title="PDF Preview"
-            />
+            <div className="flex flex-col flex-grow h-full min-h-[520px] lg:min-h-0 bg-slate-900 rounded-lg overflow-hidden border border-slate-800 shadow-md">
+              <div className="px-3 py-1.5 bg-slate-800/90 text-[11px] font-bold text-teal-400 flex justify-between items-center">
+                <span>Individual Declaration Form</span>
+                <span className="text-slate-400 font-normal">Page 1 of 1</span>
+              </div>
+              <iframe 
+                src={`${previewUrl}#toolbar=0&navpanes=0&view=Fit`} 
+                className="w-full flex-grow h-[520px] sm:h-[600px] lg:h-full border-0"
+                title="Individual Declaration Preview"
+              />
+            </div>
           ) : (
-            <div className="flex items-center justify-center h-full text-slate-500">
+            <div className="flex items-center justify-center flex-grow h-48 lg:h-full text-slate-500 text-sm">
               Generating preview...
             </div>
           )}
         </div>
       </div>
 
+      </div>
     </div>
   );
 }

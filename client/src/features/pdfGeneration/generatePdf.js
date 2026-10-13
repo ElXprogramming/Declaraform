@@ -273,9 +273,26 @@ export const generateGroupForm = async (formData) => {
     }
 
     const pdfBytes = await pdfDoc.save();
-    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-    
-    return URL.createObjectURL(blob);
+    const fullBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+    const fullUrl = URL.createObjectURL(fullBlob);
+
+    // Generate single-page blobs for mobile preview (iOS Safari cannot scroll past page 1 in an iframe)
+    const page1Doc = await PDFDocument.create();
+    const [p1] = await page1Doc.copyPages(pdfDoc, [0]);
+    page1Doc.addPage(p1);
+    const p1Bytes = await page1Doc.save();
+    const page1Url = URL.createObjectURL(new Blob([p1Bytes], { type: 'application/pdf' }));
+
+    const page2Doc = await PDFDocument.create();
+    const [p2] = await page2Doc.copyPages(pdfDoc, [1]);
+    page2Doc.addPage(p2);
+    const p2Bytes = await page2Doc.save();
+    const page2Url = URL.createObjectURL(new Blob([p2Bytes], { type: 'application/pdf' }));
+
+    return {
+      url: fullUrl,
+      pages: [page1Url, page2Url],
+    };
 
   } catch (error) {
     console.error("Error generating Group PDF:", error);
@@ -297,7 +314,26 @@ export const mergeMultiplePdfs = async (fileList) => {
 
     const pdfBytes = await mergedPdf.save();
     const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-    return URL.createObjectURL(blob);
+    const fullUrl = URL.createObjectURL(blob);
+
+    const totalPages = mergedPdf.getPageCount();
+    const pageUrls = [];
+    
+    // Extract individual page blobs for multi-page card preview (up to 12 pages)
+    const maxPreview = Math.min(totalPages, 12);
+    for (let i = 0; i < maxPreview; i++) {
+      const singleDoc = await PDFDocument.create();
+      const [copiedPage] = await singleDoc.copyPages(mergedPdf, [i]);
+      singleDoc.addPage(copiedPage);
+      const singleBytes = await singleDoc.save();
+      pageUrls.push(URL.createObjectURL(new Blob([singleBytes], { type: 'application/pdf' })));
+    }
+
+    return {
+      url: fullUrl,
+      pageCount: totalPages,
+      pages: pageUrls,
+    };
 
   } catch (error) {
     console.error("Error merging PDFs:", error);
