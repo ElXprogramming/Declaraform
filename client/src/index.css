@@ -1,1 +1,14 @@
 @import "tailwindcss";
+
+/* Smooth scrolling for in-page anchor links (#generator, #about, #contact).
+   scroll-padding-top keeps section titles from hiding under the fixed navbar. */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
