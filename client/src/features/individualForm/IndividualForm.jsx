@@ -1,21 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { generateIndividualForm } from '../pdfGeneration/generatePdf';
 import SignatureCanvas from '../../components/form/SignatureCanvas';
+import useBrowserStorage from '../../hooks/useBrowserStorage';
 
 export default function IndividualForm() {
-  const [formData, setFormData] = useState({
-    fullName: '',
-    matricNo: '',
-    phoneEmail: '',
-    courseName: '',
-    courseCode: '',
-    assessmentType: 'Assignment',
-    otherAssessment: '',
-    usedAITools: false,
-    icPassport: '',
-    date: new Date().toISOString().split('T')[0],
-    signature: null,
-  });
+  // Draft is kept in sessionStorage: survives a refresh, cleared when the tab closes.
+  const [formData, setFormData] = useBrowserStorage(
+    'declaraform:individualDraft',
+    () => ({
+      fullName: '',
+      matricNo: '',
+      phoneEmail: '',
+      courseName: '',
+      courseCode: '',
+      assessmentType: 'Assignment',
+      otherAssessment: '',
+      usedAITools: false,
+      icPassport: '',
+      date: new Date().toISOString().split('T')[0],
+      signature: null,
+    }),
+    // If storage is full, still save the text fields without the signature image.
+    { type: 'session', fallback: (data) => ({ ...data, signature: null }) }
+  );
 
   const [previewUrl, setPreviewUrl] = useState(null);
 

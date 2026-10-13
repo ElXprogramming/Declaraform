@@ -1,25 +1,53 @@
 import React, { useState, useEffect } from 'react';
 import { generateGroupForm } from '../pdfGeneration/generatePdf';
 import SignatureCanvas from '../../components/form/SignatureCanvas';
+import useBrowserStorage from '../../hooks/useBrowserStorage';
+
+const MEMBER_COUNT = 10;
+const emptyMember = { name: '', matric: '', ic: '', signature: null };
 
 export default function GroupForm() {
   const [activeSigningIndex, setActiveSigningIndex] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
 
-  const [formData, setFormData] = useState({
-    leaderName: '',
-    leaderMatric: '',
-    leaderPhoneEmail: '',
-    icPassport: '',       
-    courseName: '',
-    courseCode: '',
-    assessmentType: 'Assignment', 
-    otherAssessment: '',          
-    usedAITools: false,
-    signature: null,
-    date: new Date().toISOString().split('T')[0],
-    members: Array(10).fill({ name: '', matric: '', ic: '', signature: null })
-  });
+  // Draft is kept in sessionStorage: survives a refresh, cleared when the tab closes.
+  const [formData, setFormData] = useBrowserStorage(
+    'declaraform:groupDraft',
+    () => ({
+      leaderName: '',
+      leaderMatric: '',
+      leaderPhoneEmail: '',
+      icPassport: '',       
+      courseName: '',
+      courseCode: '',
+      assessmentType: 'Assignment', 
+      otherAssessment: '',          
+      usedAITools: false,
+      signature: null,
+      date: new Date().toISOString().split('T')[0],
+      members: Array(MEMBER_COUNT).fill(emptyMember)
+    }),
+    {
+      type: 'session',
+      // If storage is full (up to 11 signatures), still save the text fields without signature images.
+      fallback: (data) => ({
+        ...data,
+        signature: null,
+        members: data.members.map(m => ({ ...m, signature: null }))
+      })
+    }
+  );
+
+  // Guard against a malformed/older draft so the members table never breaks.
+  useEffect(() => {
+    if (!Array.isArray(formData.members) || formData.members.length !== MEMBER_COUNT) {
+      const existing = Array.isArray(formData.members) ? formData.members : [];
+      setFormData(prev => ({
+        ...prev,
+        members: Array.from({ length: MEMBER_COUNT }, (_, i) => ({ ...emptyMember, ...existing[i] }))
+      }));
+    }
+  }, [formData.members, setFormData]);
 
   useEffect(() => {
     const timer = setTimeout(async () => {
