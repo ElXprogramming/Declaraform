@@ -89,7 +89,7 @@ export default function App() {
       </div>
 
       {/* 2. Desktop Top Navbar (Hidden on Mobile) */}
-      <Navbar setActiveTab={setActiveTab} />
+      <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
 
       {/* 3. Mobile Bottom Navigation Bar (App Dock) */}
       <BottomNav 
@@ -124,8 +124,12 @@ export default function App() {
             <a 
               href="#generator" 
               onClick={(e) => {
-                e.preventDefault();
-                handleMobileScreenChange('forms', 'individual');
+                if (window.innerWidth < 768) {
+                  e.preventDefault();
+                  handleMobileScreenChange('forms', 'individual');
+                } else if (activeTab === 'merge') {
+                  setActiveTab('individual');
+                }
               }}
               className="bg-teal-600 hover:bg-teal-500 text-white font-bold py-3.5 px-8 rounded-full transition-all shadow-lg shadow-teal-500/20 flex items-center justify-center gap-2 text-sm md:text-base active:scale-95"
             >
@@ -135,8 +139,10 @@ export default function App() {
             <a 
               href="#about" 
               onClick={(e) => {
-                e.preventDefault();
-                handleMobileScreenChange('about');
+                if (window.innerWidth < 768) {
+                  e.preventDefault();
+                  handleMobileScreenChange('about');
+                }
               }}
               className="bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold py-3.5 px-8 rounded-full transition-all border border-slate-700 text-center text-sm md:text-base active:scale-95"
             >
