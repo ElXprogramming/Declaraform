@@ -1,342 +1,280 @@
-import { PDFDocument, rgb } from 'pdf-lib';
+import { PDFDocument } from 'pdf-lib';
+import { PDF_TEMPLATES } from '../../utils/constants';
+import {
+  UPLOAD_LIMITS,
+  decodeSignatureDataUrl,
+  groupFormSchema,
+  individualFormSchema,
+  logSafeError,
+  sanitizePdfText,
+  validatePdfUpload,
+} from '../../utils/security';
 
-const drawDebugGrid = (page) => {
-  const { width, height } = page.getSize();
-  const step = 10; 
+const FONT_SETTINGS = { size: 11 };
+const CHECK_MARK = 'X';
+const CHECK_MARK_SIZE = 12;
+const MAX_PREVIEW_PAGES = 12;
 
-  for (let x = 0; x < width; x += step) {
-    page.drawLine({ start: { x, y: 0 }, end: { x, y: height }, thickness: 0.5, color: rgb(0.8, 0.8, 0.8) });
-    page.drawText(`${x}`, { x, y: 10, size: 8, color: rgb(1, 0, 0) });
-  }
+const INDIVIDUAL_ASSESSMENT_COORDS = {
+  Assignment: { x: 220, y: 523 },
+  Quiz: { x: 220, y: 500 },
+  'Lab Exercise': { x: 450, y: 523 },
+  Project: { x: 450, y: 500 },
+  Others: { x: 220, y: 480, textX: 250, textY: 458 },
+};
 
-  for (let y = 0; y < height; y += step) {
-    page.drawLine({ start: { x: 0, y }, end: { x: width, y }, thickness: 0.5, color: rgb(0.8, 0.8, 0.8) });
-    page.drawText(`${y}`, { x: 10, y, size: 8, color: rgb(0, 0, 1) }); 
+const GROUP_ASSESSMENT_COORDS = {
+  Assignment: { x: 222, y: 532 },
+  Quiz: { x: 222, y: 510 },
+  'Lab Exercise': { x: 393, y: 529 },
+  Project: { x: 393, y: 506 },
+  Others: { x: 222, y: 489, textX: 245, textY: 460 },
+};
+
+const createPdfBlobUrl = (pdfBytes) =>
+  URL.createObjectURL(new Blob([pdfBytes], { type: 'application/pdf' }));
+
+const drawAssessmentType = (page, assessmentType, otherAssessment, coordsMap) => {
+  const coords = coordsMap[assessmentType];
+  if (!coords) return;
+
+  page.drawText(CHECK_MARK, { x: coords.x, y: coords.y, size: CHECK_MARK_SIZE });
+  if (assessmentType === 'Others' && otherAssessment) {
+    page.drawText(sanitizePdfText(otherAssessment, 60), {
+      x: coords.textX,
+      y: coords.textY,
+      ...FONT_SETTINGS,
+    });
   }
 };
 
-export const generateIndividualForm = async (formData) => {
+const embedSignature = async (pdfDoc, page, signatureDataUrl, { x, y, maxWidth, maxHeight }) => {
+  if (!signatureDataUrl) return;
+
+  // Decode base64 signature directly and verify PNG/JPEG magic bytes (never call fetch on data URLs)
+  const decoded = decodeSignatureDataUrl(signatureDataUrl);
+  if (!decoded) return;
+
+  let signatureImage;
+  if (decoded.format === 'png') {
+    signatureImage = await pdfDoc.embedPng(decoded.bytes);
+  } else if (decoded.format === 'jpeg') {
+    signatureImage = await pdfDoc.embedJpg(decoded.bytes);
+  }
+
+  if (!signatureImage) return;
+
+  const originalDims = signatureImage.scale(1);
+  if (originalDims.width <= 0 || originalDims.height <= 0) return;
+
+  const scale = Math.min(maxWidth / originalDims.width, maxHeight / originalDims.height);
+  const scaledDims = signatureImage.scale(scale);
+
+  page.drawImage(signatureImage, {
+    x,
+    y,
+    width: scaledDims.width,
+    height: scaledDims.height,
+  });
+};
+
+const extractSinglePageUrls = async (sourceDoc, maxPages = sourceDoc.getPageCount()) => {
+  const count = Math.min(sourceDoc.getPageCount(), maxPages);
+  const pageUrls = [];
+
+  for (let i = 0; i < count; i++) {
+    const singleDoc = await PDFDocument.create();
+    const [copiedPage] = await singleDoc.copyPages(sourceDoc, [i]);
+    singleDoc.addPage(copiedPage);
+    const singleBytes = await singleDoc.save();
+    pageUrls.push(createPdfBlobUrl(singleBytes));
+  }
+
+  return pageUrls;
+};
+
+export const generateIndividualForm = async (rawFormData) => {
   try {
-    
-    const url = '/templates/declarationFormIndividual.pdf';
-    const existingPdfBytes = await fetch(url).then(res => res.arrayBuffer());
-
-    const pdfDoc = await PDFDocument.load(existingPdfBytes);
-    const pages = pdfDoc.getPages();
-    const firstPage = pages[0]; 
-
-    // drawDebugGrid(firstPage);
-
-    // Standard font settings
-    const fontSettings = { size: 11 };
-
-    // A. Student's Information (Adjust X and Y coordinates as needed)
-    firstPage.drawText(formData.fullName, { x: 220, y: 645, ...fontSettings });
-    firstPage.drawText(formData.matricNo, { x: 220, y: 615, ...fontSettings });
-    firstPage.drawText(formData.phoneEmail, { x: 220, y: 592, ...fontSettings });
-    firstPage.drawText(formData.courseName, { x: 220, y: 572, ...fontSettings });
-    firstPage.drawText(formData.courseCode, { x: 220, y: 550, ...fontSettings });
-
-    // Assessment Type Checkboxes
-    const checkMark = 'X';
-    switch (formData.assessmentType) {
-      case 'Assignment':
-        firstPage.drawText(checkMark, { x: 220, y: 523, size: 12 });
-        break;
-      case 'Quiz':
-        firstPage.drawText(checkMark, { x: 220, y: 500, size: 12 });
-        break;
-      case 'Lab Exercise':
-        firstPage.drawText(checkMark, { x: 450, y: 523, size: 12 });
-        break;
-      case 'Project':
-        firstPage.drawText(checkMark, { x: 450, y: 500, size: 12 });
-        break;
-      case 'Others':
-        firstPage.drawText(checkMark, { x: 220, y: 480, size: 12 });
-        firstPage.drawText(formData.otherAssessment, { x: 250, y: 458, ...fontSettings });
-        break;
-      default:
-        break;
+    const parsed = individualFormSchema.safeParse(rawFormData);
+    if (!parsed.success) {
+      logSafeError('generateIndividualForm.validation', parsed.error);
+      return null;
     }
+    const formData = parsed.data;
+
+    const templateResponse = await fetch(PDF_TEMPLATES.INDIVIDUAL, { credentials: 'same-origin' });
+    if (!templateResponse.ok) {
+      throw new Error('Failed to load individual PDF template.');
+    }
+    const existingPdfBytes = await templateResponse.arrayBuffer();
+    const pdfDoc = await PDFDocument.load(existingPdfBytes);
+    const [firstPage] = pdfDoc.getPages();
+
+    // A. Student's Information
+    firstPage.drawText(formData.fullName, { x: 220, y: 645, ...FONT_SETTINGS });
+    firstPage.drawText(formData.matricNo, { x: 220, y: 615, ...FONT_SETTINGS });
+    firstPage.drawText(formData.phoneEmail, { x: 220, y: 592, ...FONT_SETTINGS });
+    firstPage.drawText(formData.courseName, { x: 220, y: 572, ...FONT_SETTINGS });
+    firstPage.drawText(formData.courseCode, { x: 220, y: 550, ...FONT_SETTINGS });
+
+    drawAssessmentType(
+      firstPage,
+      formData.assessmentType,
+      formData.otherAssessment,
+      INDIVIDUAL_ASSESSMENT_COORDS
+    );
 
     // B. Declaration (AI Tools Checkbox)
     if (formData.usedAITools) {
-      firstPage.drawText(checkMark, { x: 38, y: 225, size: 12 });
+      firstPage.drawText(CHECK_MARK, { x: 38, y: 225, size: CHECK_MARK_SIZE });
     }
 
-    // C. Student Declaration
-    firstPage.drawText(formData.icPassport, { x: 90, y: 182, ...fontSettings });
-    firstPage.drawText(formData.date, { x: 294, y: 112, ...fontSettings });
+    // C. Student Declaration & Signature
+    firstPage.drawText(formData.icPassport, { x: 90, y: 182, ...FONT_SETTINGS });
+    firstPage.drawText(formData.date, { x: 294, y: 112, ...FONT_SETTINGS });
 
-    if (formData.signature) {
-      const signatureBytes = await fetch(formData.signature).then((res) => res.arrayBuffer());
-      
-      let signatureImage;
-      if (formData.signature.includes('image/png')) {
-        signatureImage = await pdfDoc.embedPng(signatureBytes);
-      } else if (formData.signature.includes('image/jpeg')) {
-        signatureImage = await pdfDoc.embedJpg(signatureBytes);
-      }
+    await embedSignature(pdfDoc, firstPage, formData.signature, {
+      x: 30,
+      y: 120,
+      maxWidth: 150,
+      maxHeight: 35,
+    });
 
-      if (signatureImage) {
-        // Define the maximum fixed box size
-        const MAX_WIDTH = 150;
-        const MAX_HEIGHT = 35;
-        
-        // Get original dimensions and calculate the perfect scale to fit the box
-        const originalDims = signatureImage.scale(1);
-        const scale = Math.min(MAX_WIDTH / originalDims.width, MAX_HEIGHT / originalDims.height);
-        const scaledDims = signatureImage.scale(scale);
-
-        firstPage.drawImage(signatureImage, {
-          x: 30,             
-          y: 120,             
-          width: scaledDims.width,
-          height: scaledDims.height,
-        });
-      }
-    }
-
-    // Serialize and Return URL
     const pdfBytes = await pdfDoc.save();
-    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-    
-    // Instead of clicking an invisible link, we just return the URL
-    return URL.createObjectURL(blob);
-
-
-
+    return createPdfBlobUrl(pdfBytes);
   } catch (error) {
-    console.error("Error generating Individual PDF:", error);
+    logSafeError('generateIndividualForm', error);
+    return null;
   }
 };
 
-export const generateGroupForm = async (formData) => {
+export const generateGroupForm = async (rawFormData) => {
   try {
-    const url = '/templates/declarationFormGroup.pdf';
-    const existingPdfBytes = await fetch(url).then(res => res.arrayBuffer());
+    const parsed = groupFormSchema.safeParse(rawFormData);
+    if (!parsed.success) {
+      logSafeError('generateGroupForm.validation', parsed.error);
+      return null;
+    }
+    const formData = parsed.data;
 
+    const templateResponse = await fetch(PDF_TEMPLATES.GROUP, { credentials: 'same-origin' });
+    if (!templateResponse.ok) {
+      throw new Error('Failed to load group PDF template.');
+    }
+    const existingPdfBytes = await templateResponse.arrayBuffer();
     const pdfDoc = await PDFDocument.load(existingPdfBytes);
-    const pages = pdfDoc.getPages();
-    const firstPage = pages[0]; // Leader info
-    const secondPage = pages[1]; // Table of members
-
-    //drawDebugGrid(firstPage);
-
-    const fontSettings = { size: 11 };
+    const [firstPage, secondPage] = pdfDoc.getPages();
 
     // A. Leader's Information (Page 1)
-    firstPage.drawText(formData.leaderName, { x: 220, y: 650, ...fontSettings });
-    firstPage.drawText(formData.leaderMatric, { x: 220, y: 625, ...fontSettings });
-    firstPage.drawText(formData.leaderPhoneEmail, { x: 220, y: 600, ...fontSettings });
-    firstPage.drawText(formData.courseName, { x: 220, y: 580, ...fontSettings });
-    firstPage.drawText(formData.courseCode, { x: 220, y: 559, ...fontSettings });
+    firstPage.drawText(formData.leaderName, { x: 220, y: 650, ...FONT_SETTINGS });
+    firstPage.drawText(formData.leaderMatric, { x: 220, y: 625, ...FONT_SETTINGS });
+    firstPage.drawText(formData.leaderPhoneEmail, { x: 220, y: 600, ...FONT_SETTINGS });
+    firstPage.drawText(formData.courseName, { x: 220, y: 580, ...FONT_SETTINGS });
+    firstPage.drawText(formData.courseCode, { x: 220, y: 559, ...FONT_SETTINGS });
 
-    const checkMark = 'X';
-    switch (formData.assessmentType) {
-      case 'Assignment':
-        firstPage.drawText(checkMark, { x: 222, y: 532, size: 12 });
-        break;
-      case 'Quiz':
-        firstPage.drawText(checkMark, { x: 222, y: 510, size: 12 });
-        break;
-      case 'Lab Exercise':
-        firstPage.drawText(checkMark, { x: 393, y: 529, size: 12 });
-        break;
-      case 'Project':
-        firstPage.drawText(checkMark, { x: 393, y: 506, size: 12 });
-        break;
-      case 'Others':
-        firstPage.drawText(checkMark, { x: 222, y: 489, size: 12 });
-        firstPage.drawText(formData.otherAssessment, { x: 245, y: 460, ...fontSettings });
-        break;
-      default:
-        break;
-    }
+    drawAssessmentType(
+      firstPage,
+      formData.assessmentType,
+      formData.otherAssessment,
+      GROUP_ASSESSMENT_COORDS
+    );
 
+    // B. Declaration (AI Tools Checkbox)
     if (formData.usedAITools) {
-      firstPage.drawText(checkMark, { x: 34, y: 230, size: 12 });
+      firstPage.drawText(CHECK_MARK, { x: 34, y: 230, size: CHECK_MARK_SIZE });
     }
 
-    firstPage.drawText(formData.icPassport, { x: 125, y: 186, ...fontSettings });
-    firstPage.drawText(formData.date, { x: 300, y: 116, ...fontSettings });
+    // C. Leader Declaration & Signature
+    firstPage.drawText(formData.icPassport, { x: 125, y: 186, ...FONT_SETTINGS });
+    firstPage.drawText(formData.date, { x: 300, y: 116, ...FONT_SETTINGS });
 
-    if (formData.signature) {
-      const signatureBytes = await fetch(formData.signature).then((res) => res.arrayBuffer());
-      
-      let signatureImage;
-      if (formData.signature.includes('image/png')) {
-        signatureImage = await pdfDoc.embedPng(signatureBytes);
-      } else if (formData.signature.includes('image/jpeg')) {
-        signatureImage = await pdfDoc.embedJpg(signatureBytes);
-      }
-
-      if (signatureImage) {
-        // Define the maximum fixed box size
-        const MAX_WIDTH = 150;
-        const MAX_HEIGHT = 40;
-        
-        // Get original dimensions and calculate the perfect scale to fit the box
-        const originalDims = signatureImage.scale(1);
-        const scale = Math.min(MAX_WIDTH / originalDims.width, MAX_HEIGHT / originalDims.height);
-        const scaledDims = signatureImage.scale(scale);
-
-        firstPage.drawImage(signatureImage, {
-          x: 30,             
-          y: 120,             
-          width: scaledDims.width,
-          height: scaledDims.height,
-        });
-      }
-    }
+    await embedSignature(pdfDoc, firstPage, formData.signature, {
+      x: 30,
+      y: 120,
+      maxWidth: 150,
+      maxHeight: 40,
+    });
 
     // D. List of Group Members (Page 2 Table)
-    // Starting Y coordinate for the first row in the table
-    //drawDebugGrid(secondPage);
-
-    const startY = 626; 
-    const rowHeight = 22; // Space between each row
-
-    /**formData.members.forEach((member, index) => {
-      if (!member.name && !member.matric) return; // Skip empty rows
-      
-      const currentY = startY - (index * rowHeight);
-      
-      secondPage.drawText(member.name, { x: 50, y: currentY, size: 10 });
-      secondPage.drawText(member.matric, { x: 265, y: currentY, size: 10 });
-      secondPage.drawText(member.ic, { x: 368, y: currentY, size: 10 });
-      if (formData.signature) {
-      const signatureBytes = await fetch(formData.signature).then((res) => res.arrayBuffer());
-      
-      let signatureImage;
-      if (formData.signature.includes('image/png')) {
-        signatureImage = await pdfDoc.embedPng(signatureBytes);
-      } else if (formData.signature.includes('image/jpeg')) {
-        signatureImage = await pdfDoc.embedJpg(signatureBytes);
-      }
-
-      if (signatureImage) {
-        // Change this line to use the new parameter! Make sure to parse it as a float.
-        const scaleValue = parseFloat(formData.signatureScale);
-        const scaledDims = signatureImage.scale(scaleValue);
-
-        firstPage.drawImage(signatureImage, {
-          x: 200,             
-          y: 220,             
-          width: scaledDims.width,
-          height: scaledDims.height,
-        });
-      }
-    }
-    });**/
+    const startY = 626;
+    const rowHeight = 22;
 
     for (let index = 0; index < formData.members.length; index++) {
       const member = formData.members[index];
-      
-      if (!member.name && !member.matric) continue; // Skip empty rows
-      
-      const currentY = startY - (index * rowHeight);
-      
+      if (!member.name && !member.matric) continue;
+
+      const currentY = startY - index * rowHeight;
+
       secondPage.drawText(member.name, { x: 50, y: currentY, size: 10 });
       secondPage.drawText(member.matric, { x: 265, y: currentY, size: 10 });
       secondPage.drawText(member.ic, { x: 368, y: currentY, size: 10 });
 
-      // --- EMBED MEMBER SIGNATURE ---
-      if (member.signature) {
-        const signatureBytes = await fetch(member.signature).then(res => res.arrayBuffer());
-        
-        let signatureImage;
-        if (member.signature.includes('image/png')) {
-          signatureImage = await pdfDoc.embedPng(signatureBytes);
-        } else if (member.signature.includes('image/jpeg')) {
-          signatureImage = await pdfDoc.embedJpg(signatureBytes);
-        }
-
-        if (signatureImage) {
-          // Define a tiny box for the table row
-          const MAX_WIDTH = 60;
-          const MAX_HEIGHT = 18;
-          
-          const originalDims = signatureImage.scale(1);
-          const scale = Math.min(MAX_WIDTH / originalDims.width, MAX_HEIGHT / originalDims.height);
-          const scaledDims = signatureImage.scale(scale);
-
-          secondPage.drawImage(signatureImage, {
-            x: 490, 
-            y: currentY - 5, // Tweak this slightly if it floats too high/low off the line
-            width: scaledDims.width,
-            height: scaledDims.height,
-          });
-        }
-      }
+      await embedSignature(pdfDoc, secondPage, member.signature, {
+        x: 490,
+        y: currentY - 5,
+        maxWidth: 60,
+        maxHeight: 18,
+      });
     }
 
     const pdfBytes = await pdfDoc.save();
-    const fullBlob = new Blob([pdfBytes], { type: 'application/pdf' });
-    const fullUrl = URL.createObjectURL(fullBlob);
+    const fullUrl = createPdfBlobUrl(pdfBytes);
 
-    // Generate single-page blobs for mobile preview (iOS Safari cannot scroll past page 1 in an iframe)
-    const page1Doc = await PDFDocument.create();
-    const [p1] = await page1Doc.copyPages(pdfDoc, [0]);
-    page1Doc.addPage(p1);
-    const p1Bytes = await page1Doc.save();
-    const page1Url = URL.createObjectURL(new Blob([p1Bytes], { type: 'application/pdf' }));
-
-    const page2Doc = await PDFDocument.create();
-    const [p2] = await page2Doc.copyPages(pdfDoc, [1]);
-    page2Doc.addPage(p2);
-    const p2Bytes = await page2Doc.save();
-    const page2Url = URL.createObjectURL(new Blob([p2Bytes], { type: 'application/pdf' }));
+    // Single-page blobs for mobile preview (iOS Safari cannot scroll past page 1 in an iframe)
+    const pages = await extractSinglePageUrls(pdfDoc, 2);
 
     return {
       url: fullUrl,
-      pages: [page1Url, page2Url],
+      pages,
     };
-
   } catch (error) {
-    console.error("Error generating Group PDF:", error);
+    logSafeError('generateGroupForm', error);
+    return null;
   }
-  
 };
 
 export const mergeMultiplePdfs = async (fileList) => {
   try {
+    if (!Array.isArray(fileList) || fileList.length < 2) {
+      throw new Error('At least 2 PDF files are required to merge.');
+    }
+    if (fileList.length > UPLOAD_LIMITS.MAX_PDF_FILES) {
+      throw new Error(`Cannot merge more than ${UPLOAD_LIMITS.MAX_PDF_FILES} PDF files at once.`);
+    }
+
+    let totalBytes = 0;
     const mergedPdf = await PDFDocument.create();
 
-    for (const file of fileList) {
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await PDFDocument.load(arrayBuffer);
-      
+    for (const item of fileList) {
+      const rawFile = item?.file instanceof File ? item.file : item;
+      const validation = await validatePdfUpload(rawFile);
+      if (!validation.valid) {
+        throw new Error(validation.error);
+      }
+
+      totalBytes += rawFile.size;
+      if (totalBytes > UPLOAD_LIMITS.MAX_TOTAL_PDF_BYTES) {
+        throw new Error('Total size of selected PDF files exceeds the 100 MB safety limit.');
+      }
+
+      const arrayBuffer = await rawFile.arrayBuffer();
+      const pdf = await PDFDocument.load(arrayBuffer, { ignoreEncryption: false });
       const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
       copiedPages.forEach((page) => mergedPdf.addPage(page));
     }
 
     const pdfBytes = await mergedPdf.save();
-    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-    const fullUrl = URL.createObjectURL(blob);
-
+    const fullUrl = createPdfBlobUrl(pdfBytes);
     const totalPages = mergedPdf.getPageCount();
-    const pageUrls = [];
-    
-    // Extract individual page blobs for multi-page card preview (up to 12 pages)
-    const maxPreview = Math.min(totalPages, 12);
-    for (let i = 0; i < maxPreview; i++) {
-      const singleDoc = await PDFDocument.create();
-      const [copiedPage] = await singleDoc.copyPages(mergedPdf, [i]);
-      singleDoc.addPage(copiedPage);
-      const singleBytes = await singleDoc.save();
-      pageUrls.push(URL.createObjectURL(new Blob([singleBytes], { type: 'application/pdf' })));
-    }
+    const pageUrls = await extractSinglePageUrls(mergedPdf, MAX_PREVIEW_PAGES);
 
     return {
       url: fullUrl,
       pageCount: totalPages,
       pages: pageUrls,
     };
-
   } catch (error) {
-    console.error("Error merging PDFs:", error);
-    throw error;
+    logSafeError('mergeMultiplePdfs', error);
+    throw new Error('Unable to merge the selected PDF files.');
   }
 };

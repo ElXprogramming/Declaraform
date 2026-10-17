@@ -1,0 +1,15 @@
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Dependencies & Build Outputs
+node_modules/
+client/node_modules/
+client/dist/
+client/dist-ssr/
+
+# Logs & OS Files
+*.log
+.DS_Store

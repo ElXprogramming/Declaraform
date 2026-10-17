@@ -33,12 +33,3 @@ html {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(20, 184, 166, 0.6);
 }
-
-/* Safe area padding for mobile notch / home indicator devices */
-.pb-safe {
-  padding-bottom: env(safe-area-inset-bottom, 0.75rem);
-}
-
-.pt-safe {
-  padding-top: env(safe-area-inset-top, 0.75rem);
-}

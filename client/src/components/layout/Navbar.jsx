@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+
+const SECTION_IDS = ['hero', 'generator', 'about', 'contact'];
 
 const NAV_ITEMS = [
   {
@@ -59,8 +61,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
 
   // Track which section is currently in the middle of the viewport on desktop.
   useEffect(() => {
-    const sectionIds = ['hero', 'generator', 'about', 'contact'];
-    const sections = sectionIds
+    const sections = SECTION_IDS
       .map(id => document.getElementById(id))
       .filter(Boolean);
     if (sections.length === 0 || !('IntersectionObserver' in window)) return undefined;
@@ -131,9 +132,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
                 onClick={
                   item.tab
                     ? () => {
-                        if (item.id === 'generator' && activeTab === 'group') {
-                          setActiveTab('group');
-                        } else {
+                        if (item.id !== 'generator' || activeTab !== 'group') {
                           setActiveTab(item.tab);
                         }
                       }

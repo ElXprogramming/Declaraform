@@ -1,4 +1,3 @@
-'use client';
 import { useRef, useEffect, useCallback, useMemo } from 'react';
 import { gsap } from 'gsap';
 import { InertiaPlugin } from 'gsap/InertiaPlugin';
@@ -49,9 +48,6 @@ const DotGrid = ({
   const pointerRef = useRef({
     x: 0,
     y: 0,
-    vx: 0,
-    vy: 0,
-    speed: 0,
     lastTime: 0,
     lastX: 0,
     lastY: 0
@@ -158,7 +154,9 @@ const DotGrid = ({
     let ro = null;
     if ('ResizeObserver' in window) {
       ro = new ResizeObserver(buildGrid);
-      wrapperRef.current && ro.observe(wrapperRef.current);
+      if (wrapperRef.current) {
+        ro.observe(wrapperRef.current);
+      }
     } else {
       window.addEventListener('resize', buildGrid);
     }
@@ -170,6 +168,7 @@ const DotGrid = ({
 
   useEffect(() => {
     const onMove = e => {
+      if (!canvasRef.current) return;
       const now = performance.now();
       const pr = pointerRef.current;
       const dt = pr.lastTime ? now - pr.lastTime : 16;
@@ -187,9 +186,6 @@ const DotGrid = ({
       pr.lastTime = now;
       pr.lastX = e.clientX;
       pr.lastY = e.clientY;
-      pr.vx = vx;
-      pr.vy = vy;
-      pr.speed = speed;
 
       const rect = canvasRef.current.getBoundingClientRect();
       pr.x = e.clientX - rect.left;
@@ -219,6 +215,7 @@ const DotGrid = ({
     };
 
     const onClick = e => {
+      if (!canvasRef.current) return;
       const rect = canvasRef.current.getBoundingClientRect();
       const cx = e.clientX - rect.left;
       const cy = e.clientY - rect.top;

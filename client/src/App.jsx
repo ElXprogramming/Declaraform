@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import IndividualForm from './features/individualForm/IndividualForm';
 import GroupForm from './features/groupForm/GroupForm';
 import DotGrid from './components/backgrounds/DotGrid';
@@ -6,6 +6,110 @@ import Navbar from './components/layout/Navbar';
 import BottomNav from './components/layout/BottomNav';
 import PdfMerger from './features/pdfMerger/PdfMerger';
 import useScrollAnimations, { refreshScrollTriggers } from './hooks/useScrollAnimations';
+import { FEEDBACK_CATEGORIES, FEEDBACK_ENDPOINT_URL } from './utils/constants';
+import {
+  FIELD_LIMITS,
+  UPLOAD_LIMITS,
+  createRateLimiter,
+  feedbackSchema,
+  isSafeExternalUrl,
+  isValidFeedbackEndpoint,
+  logSafeError,
+  sanitizePlainText,
+  stripMultilineControlChars,
+} from './utils/security';
+
+const feedbackRateLimiter = createRateLimiter({
+  maxAttempts: 3,
+  windowMs: 10 * 60 * 1000,
+  cooldownMs: 30 * 1000,
+});
+
+const QUICK_TOOLS = [
+  {
+    screen: 'forms',
+    tab: 'individual',
+    icon: '👤',
+    title: 'Individual Declaration',
+    subtitle: 'Single student assignment form',
+    iconBoxClass: 'bg-teal-500/10 border-teal-500/20 text-teal-400',
+    activeBorderClass: 'active:border-teal-500/50',
+  },
+  {
+    screen: 'forms',
+    tab: 'group',
+    icon: '👥',
+    title: 'Group Declaration',
+    subtitle: 'Up to 10 members with signatures',
+    iconBoxClass: 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400',
+    activeBorderClass: 'active:border-indigo-500/50',
+  },
+  {
+    screen: 'merge',
+    tab: 'merge',
+    icon: '📑',
+    title: 'Merge PDF Files',
+    subtitle: 'Combine declaration & report',
+    iconBoxClass: 'bg-amber-500/10 border-amber-500/20 text-amber-400',
+    activeBorderClass: 'active:border-amber-500/50',
+  },
+];
+
+const DESKTOP_TABS = [
+  { id: 'individual', label: 'Individual Form' },
+  { id: 'group', label: 'Group Form' },
+  { id: 'merge', label: 'Merge PDFs' },
+];
+
+const SOCIAL_LINKS = [
+  {
+    label: 'Portfolio',
+    subtitle: 'eldionryanportfolio.vercel.app',
+    href: 'https://eldionryanportfolio.vercel.app',
+    external: true,
+    icon: (
+      <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+      </svg>
+    ),
+  },
+  {
+    label: 'GitHub',
+    subtitle: '@ElXprogramming',
+    href: 'https://github.com/ElXprogramming',
+    external: true,
+    icon: (
+      <svg className="w-5 h-5 md:w-6 md:h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+      </svg>
+    ),
+  },
+  {
+    label: 'LinkedIn',
+    subtitle: 'Eldion Ryan Godius',
+    href: 'https://www.linkedin.com/in/eldion-ryan-godius-897064235',
+    external: true,
+    icon: (
+      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Email',
+    subtitle: 'nayrnoidle@gmail.com',
+    href: 'mailto:nayrnoidle@gmail.com',
+    external: false,
+    icon: (
+      <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+      </svg>
+    ),
+  },
+].filter((link) => isSafeExternalUrl(link.href));
+
+const ALLOWED_TABS = new Set(['individual', 'group', 'merge']);
+const ALLOWED_MOBILE_SCREENS = new Set(['home', 'forms', 'merge', 'about', 'contact']);
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('individual');
@@ -18,9 +122,16 @@ export default function App() {
     refreshScrollTriggers();
   }, [activeTab, mobileScreen]);
 
+  const handleSafeTabChange = (nextTab) => {
+    if (ALLOWED_TABS.has(nextTab)) {
+      setActiveTab(nextTab);
+    }
+  };
+
   const handleMobileScreenChange = (screen, tab) => {
+    if (!ALLOWED_MOBILE_SCREENS.has(screen)) return;
     setMobileScreen(screen);
-    if (tab) {
+    if (tab && ALLOWED_TABS.has(tab)) {
       setActiveTab(tab);
     } else if (screen === 'forms' && activeTab === 'merge') {
       setActiveTab('individual');
@@ -31,44 +142,89 @@ export default function App() {
   };
 
   const [feedback, setFeedback] = useState({
-    name: '',
-    category: 'Bug Report', 
+    category: 'Bug Report',
     contact: '',
-    message: ''
+    message: '',
   });
   const [formStatus, setFormStatus] = useState('idle');
+  const [feedbackError, setFeedbackError] = useState('');
 
   const handleFeedbackChange = (e) => {
     const { name, value } = e.target;
-    setFeedback(prev => ({ ...prev, [name]: value }));
+    if (name === 'contact') {
+      setFeedback((prev) => ({
+        ...prev,
+        contact: sanitizePlainText(value, FIELD_LIMITS.FEEDBACK_CONTACT),
+      }));
+    } else if (name === 'message') {
+      setFeedback((prev) => ({
+        ...prev,
+        message: stripMultilineControlChars(value).slice(0, FIELD_LIMITS.FEEDBACK_MESSAGE),
+      }));
+    }
   };
 
   const handleFeedbackSubmit = async (e) => {
     e.preventDefault();
+    setFeedbackError('');
+
+    const parsed = feedbackSchema.safeParse(feedback);
+    if (!parsed.success) {
+      const firstIssue = parsed.error.issues?.[0]?.message || 'Please check your feedback input.';
+      setFeedbackError(firstIssue);
+      setFormStatus('error');
+      return;
+    }
+
+    if (!isValidFeedbackEndpoint(FEEDBACK_ENDPOINT_URL)) {
+      setFeedbackError('Feedback service is currently unavailable.');
+      setFormStatus('error');
+      return;
+    }
+
+    const rateCheck = feedbackRateLimiter.checkAndRecord();
+    if (!rateCheck.allowed) {
+      setFeedbackError(rateCheck.reason);
+      setFormStatus('error');
+      return;
+    }
+
+    const serializedBody = JSON.stringify({
+      Category: parsed.data.category,
+      Name: 'Not provided',
+      Contact: parsed.data.contact || 'Not provided',
+      Message: parsed.data.message,
+    });
+
+    if (serializedBody.length > UPLOAD_LIMITS.MAX_FEEDBACK_PAYLOAD_BYTES) {
+      setFeedbackError('Feedback message is too large.');
+      setFormStatus('error');
+      return;
+    }
+
     setFormStatus('submitting');
-    
-    // PASTE YOUR GOOGLE SCRIPT URL HERE:
-    const ENDPOINT_URL = "https://script.google.com/macros/s/AKfycbzKn_G_BWaegCu4hmbQthgPWBINlKU2tWUXbgUCQlZg-HOyJQYV8Mo484CiBHuSqirfQw/exec"; 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
-      await fetch(ENDPOINT_URL, {
+      await fetch(FEEDBACK_ENDPOINT_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({
-          Category: feedback.category,
-          Name: feedback.name || 'Not provided',
-          Contact: feedback.contact || 'Not provided',
-          Message: feedback.message,
-        })
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: serializedBody,
+        credentials: 'omit',
+        referrerPolicy: 'no-referrer',
+        signal: controller.signal,
       });
 
       setFormStatus('success');
-      setFeedback({ name: '', category: 'Bug Report', contact: '', message: '' });
+      setFeedback({ category: 'Bug Report', contact: '', message: '' });
       setTimeout(() => setFormStatus('idle'), 5000);
-      
     } catch (error) {
-      console.error("Feedback error:", error);
+      logSafeError('App.handleFeedbackSubmit', error);
+      setFeedbackError('Oops! Something went wrong. Please try again later.');
       setFormStatus('error');
+    } finally {
+      clearTimeout(timeoutId);
     }
   };
 
@@ -89,7 +245,7 @@ export default function App() {
       </div>
 
       {/* 2. Desktop Top Navbar (Hidden on Mobile) */}
-      <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Navbar activeTab={activeTab} setActiveTab={handleSafeTabChange} />
 
       {/* 3. Mobile Bottom Navigation Bar (App Dock) */}
       <BottomNav 
@@ -128,7 +284,7 @@ export default function App() {
                   e.preventDefault();
                   handleMobileScreenChange('forms', 'individual');
                 } else if (activeTab === 'merge') {
-                  setActiveTab('individual');
+                  handleSafeTabChange('individual');
                 }
               }}
               className="bg-teal-600 hover:bg-teal-500 text-white font-bold py-3.5 px-8 rounded-full transition-all shadow-lg shadow-teal-500/20 flex items-center justify-center gap-2 text-sm md:text-base active:scale-95"
@@ -157,61 +313,30 @@ export default function App() {
               <span className="text-[10px] text-slate-400 font-medium bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-full">100% Client-Side</span>
             </div>
 
-            <button
-              type="button"
-              onClick={() => handleMobileScreenChange('forms', 'individual')}
-              className="w-full p-3.5 bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 active:border-teal-500/50 rounded-2xl flex items-center justify-between transition-all shadow-lg active:scale-[0.98]"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 text-lg">
-                  👤
+            {QUICK_TOOLS.map((tool) => (
+              <button
+                key={tool.tab}
+                type="button"
+                onClick={() => handleMobileScreenChange(tool.screen, tool.tab)}
+                className={`w-full p-3.5 bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 ${tool.activeBorderClass} rounded-2xl flex items-center justify-between transition-all shadow-lg active:scale-[0.98]`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl border flex items-center justify-center text-lg ${tool.iconBoxClass}`}>
+                    {tool.icon}
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold text-white">{tool.title}</div>
+                    <div className="text-xs text-slate-400">{tool.subtitle}</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-sm font-bold text-white">Individual Declaration</div>
-                  <div className="text-xs text-slate-400">Single student assignment form</div>
-                </div>
-              </div>
-              <span className="text-slate-500 text-sm">→</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleMobileScreenChange('forms', 'group')}
-              className="w-full p-3.5 bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 active:border-indigo-500/50 rounded-2xl flex items-center justify-between transition-all shadow-lg active:scale-[0.98]"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 text-lg">
-                  👥
-                </div>
-                <div>
-                  <div className="text-sm font-bold text-white">Group Declaration</div>
-                  <div className="text-xs text-slate-400">Up to 10 members with signatures</div>
-                </div>
-              </div>
-              <span className="text-slate-500 text-sm">→</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleMobileScreenChange('merge', 'merge')}
-              className="w-full p-3.5 bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 active:border-amber-500/50 rounded-2xl flex items-center justify-between transition-all shadow-lg active:scale-[0.98]"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 text-lg">
-                  📑
-                </div>
-                <div>
-                  <div className="text-sm font-bold text-white">Merge PDF Files</div>
-                  <div className="text-xs text-slate-400">Combine declaration & report</div>
-                </div>
-              </div>
-              <span className="text-slate-500 text-sm">→</span>
-            </button>
+                <span className="text-slate-500 text-sm">→</span>
+              </button>
+            ))}
 
             <div className="pt-2 text-center">
               <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-400">
                 <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                Zero server uploads • Stored locally in your browser
+                Zero server uploads • Processed in browser memory
               </span>
             </div>
           </div>
@@ -238,36 +363,20 @@ export default function App() {
 
           {/* Desktop Tab Bar (All 3 tabs) */}
           <div data-reveal className="hidden md:flex justify-center mb-6 border-b border-slate-700">
-            <button
-              className={`px-6 py-3 font-semibold text-sm transition-colors ${
-                activeTab === 'individual'
-                  ? 'border-b-2 border-teal-500 text-teal-400 drop-shadow'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-              onClick={() => setActiveTab('individual')}
-            >
-              Individual Form
-            </button>
-            <button
-              className={`px-6 py-3 font-semibold text-sm transition-colors ${
-                activeTab === 'group'
-                  ? 'border-b-2 border-teal-500 text-teal-400 drop-shadow'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-              onClick={() => setActiveTab('group')}
-            >
-              Group Form
-            </button>
-            <button
-              className={`px-6 py-3 font-semibold text-sm transition-colors ${
-                activeTab === 'merge'
-                  ? 'border-b-2 border-teal-500 text-teal-400 drop-shadow'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-              onClick={() => setActiveTab('merge')}
-            >
-              Merge PDFs
-            </button>
+            {DESKTOP_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                className={`px-6 py-3 font-semibold text-sm transition-colors ${
+                  activeTab === tab.id
+                    ? 'border-b-2 border-teal-500 text-teal-400 drop-shadow'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                onClick={() => handleSafeTabChange(tab.id)}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
 
           {/* Mobile Tab Bar (When in Forms mode: Segmented Pill Switcher between Individual & Group) */}
@@ -275,7 +384,7 @@ export default function App() {
             <div className="flex md:hidden justify-center mb-5 bg-slate-950/80 p-1 rounded-2xl border border-slate-800 max-w-sm mx-auto shadow-inner">
               <button
                 type="button"
-                onClick={() => setActiveTab('individual')}
+                onClick={() => handleSafeTabChange('individual')}
                 className={`flex-1 py-2 px-3 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
                   activeTab === 'individual'
                     ? 'bg-teal-500 text-slate-950 shadow-md shadow-teal-500/20'
@@ -286,7 +395,7 @@ export default function App() {
               </button>
               <button
                 type="button"
-                onClick={() => setActiveTab('group')}
+                onClick={() => handleSafeTabChange('group')}
                 className={`flex-1 py-2 px-3 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
                   activeTab === 'group'
                     ? 'bg-teal-500 text-slate-950 shadow-md shadow-teal-500/20'
@@ -371,7 +480,7 @@ export default function App() {
                 </div>
                 <h3 className="text-lg md:text-xl font-bold text-white mb-2 tracking-tight">Zero-Data Policy</h3>
                 <p className="text-slate-400 leading-relaxed text-xs md:text-sm">
-                  Your data never leaves your device. This application runs 100% locally in your browser. Absolutely no personal information, matriculation numbers, or drawn signatures are ever uploaded to a server, tracked, or stored in a database. What happens on your device, stays on your device.
+                  Your data never leaves your device. This application runs 100% locally in your browser. Absolutely no personal information, matriculation numbers, or drawn signatures are ever uploaded to a server, tracked, or persisted to disk storage. What happens on your device, stays in memory on your device.
                 </p>
               </div>
 
@@ -392,95 +501,29 @@ export default function App() {
             
             {/* LEFT COLUMN (Desktop Only): Stacked Social Cards */}
             <div className="hidden md:flex md:col-span-1 flex-col gap-4">
-              <a
-                data-reveal
-                href="https://eldionryanportfolio.vercel.app"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 bg-slate-900/80 backdrop-blur-md p-5 rounded-3xl border border-slate-800 hover:border-teal-500/40 shadow-xl flex items-center justify-between gap-4 transition-all hover:-translate-y-1 group"
-              >
-                <div className="flex items-center gap-4 min-w-0">
-                  <div className="bg-teal-500/10 w-12 h-12 shrink-0 rounded-2xl flex items-center justify-center border border-teal-500/20 shadow-inner text-teal-400 group-hover:bg-teal-500/20 group-hover:scale-105 transition-all">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                    </svg>
+              {SOCIAL_LINKS.map((item) => (
+                <a
+                  key={item.label}
+                  data-reveal
+                  href={item.href}
+                  target={item.external ? '_blank' : undefined}
+                  rel={item.external ? 'noopener noreferrer' : undefined}
+                  className="flex-1 bg-slate-900/80 backdrop-blur-md p-5 rounded-3xl border border-slate-800 hover:border-teal-500/40 shadow-xl flex items-center justify-between gap-4 transition-all hover:-translate-y-1 group"
+                >
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="bg-teal-500/10 w-12 h-12 shrink-0 rounded-2xl flex items-center justify-center border border-teal-500/20 shadow-inner text-teal-400 group-hover:bg-teal-500/20 group-hover:scale-105 transition-all">
+                      {item.icon}
+                    </div>
+                    <div className="min-w-0 text-left">
+                      <h3 className="text-base font-bold text-white group-hover:text-teal-400 transition-colors tracking-tight">{item.label}</h3>
+                      <p className="text-slate-400 text-xs truncate mt-0.5">{item.subtitle}</p>
+                    </div>
                   </div>
-                  <div className="min-w-0 text-left">
-                    <h3 className="text-base font-bold text-white group-hover:text-teal-400 transition-colors tracking-tight">Portfolio</h3>
-                    <p className="text-slate-400 text-xs truncate mt-0.5">eldionryanportfolio.vercel.app</p>
-                  </div>
-                </div>
-                <svg className="w-5 h-5 shrink-0 text-slate-500 group-hover:text-teal-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 17L17 7M17 7H7M17 7v10" />
-                </svg>
-              </a>
-
-              <a
-                data-reveal
-                href="https://github.com/ElXprogramming"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 bg-slate-900/80 backdrop-blur-md p-5 rounded-3xl border border-slate-800 hover:border-teal-500/40 shadow-xl flex items-center justify-between gap-4 transition-all hover:-translate-y-1 group"
-              >
-                <div className="flex items-center gap-4 min-w-0">
-                  <div className="bg-teal-500/10 w-12 h-12 shrink-0 rounded-2xl flex items-center justify-center border border-teal-500/20 shadow-inner text-teal-400 group-hover:bg-teal-500/20 group-hover:scale-105 transition-all">
-                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
-                    </svg>
-                  </div>
-                  <div className="min-w-0 text-left">
-                    <h3 className="text-base font-bold text-white group-hover:text-teal-400 transition-colors tracking-tight">GitHub</h3>
-                    <p className="text-slate-400 text-xs truncate mt-0.5">@ElXprogramming</p>
-                  </div>
-                </div>
-                <svg className="w-5 h-5 shrink-0 text-slate-500 group-hover:text-teal-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 17L17 7M17 7H7M17 7v10" />
-                </svg>
-              </a>
-
-              <a
-                data-reveal
-                href="https://www.linkedin.com/in/eldion-ryan-godius-897064235"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 bg-slate-900/80 backdrop-blur-md p-5 rounded-3xl border border-slate-800 hover:border-teal-500/40 shadow-xl flex items-center justify-between gap-4 transition-all hover:-translate-y-1 group"
-              >
-                <div className="flex items-center gap-4 min-w-0">
-                  <div className="bg-teal-500/10 w-12 h-12 shrink-0 rounded-2xl flex items-center justify-center border border-teal-500/20 shadow-inner text-teal-400 group-hover:bg-teal-500/20 group-hover:scale-105 transition-all">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-                    </svg>
-                  </div>
-                  <div className="min-w-0 text-left">
-                    <h3 className="text-base font-bold text-white group-hover:text-teal-400 transition-colors tracking-tight">LinkedIn</h3>
-                    <p className="text-slate-400 text-xs truncate mt-0.5">Eldion Ryan Godius</p>
-                  </div>
-                </div>
-                <svg className="w-5 h-5 shrink-0 text-slate-500 group-hover:text-teal-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 17L17 7M17 7H7M17 7v10" />
-                </svg>
-              </a>
-
-              <a
-                data-reveal
-                href="mailto:nayrnoidle@gmail.com"
-                className="flex-1 bg-slate-900/80 backdrop-blur-md p-5 rounded-3xl border border-slate-800 hover:border-teal-500/40 shadow-xl flex items-center justify-between gap-4 transition-all hover:-translate-y-1 group"
-              >
-                <div className="flex items-center gap-4 min-w-0">
-                  <div className="bg-teal-500/10 w-12 h-12 shrink-0 rounded-2xl flex items-center justify-center border border-teal-500/20 shadow-inner text-teal-400 group-hover:bg-teal-500/20 group-hover:scale-105 transition-all">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <div className="min-w-0 text-left">
-                    <h3 className="text-base font-bold text-white group-hover:text-teal-400 transition-colors tracking-tight">Email</h3>
-                    <p className="text-slate-400 text-xs truncate mt-0.5">nayrnoidle@gmail.com</p>
-                  </div>
-                </div>
-                <svg className="w-5 h-5 shrink-0 text-slate-500 group-hover:text-teal-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 17L17 7M17 7H7M17 7v10" />
-                </svg>
-              </a>
+                  <svg className="w-5 h-5 shrink-0 text-slate-500 group-hover:text-teal-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 17L17 7M17 7H7M17 7v10" />
+                  </svg>
+                </a>
+              ))}
             </div>
 
             {/* RIGHT COLUMN: Message / Feedback Box */}
@@ -492,18 +535,18 @@ export default function App() {
                 
                 {/* Category Buttons */}
                 <div className="flex flex-wrap gap-2.5 mb-5 md:mb-6">
-                  {['Bug Report', 'Idea Suggestion', 'Other'].map(cat => (
+                  {FEEDBACK_CATEGORIES.map(({ label, icon }) => (
                     <button
-                      key={cat}
+                      key={label}
                       type="button"
-                      onClick={() => setFeedback({ ...feedback, category: cat })}
+                      onClick={() => setFeedback((prev) => ({ ...prev, category: label }))}
                       className={`px-4 md:px-5 py-2 rounded-full text-xs md:text-sm font-semibold transition-colors border ${
-                        feedback.category === cat
+                        feedback.category === label
                           ? 'bg-teal-600/20 border-teal-500 text-teal-400'
                           : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-600'
                       }`}
                     >
-                      {cat === 'Bug Report' ? '🐛 ' : cat === 'Idea Suggestion' ? '💡 ' : '💬 '} {cat}
+                      {icon} {label}
                     </button>
                   ))}
                 </div>
@@ -513,6 +556,7 @@ export default function App() {
                   <input 
                     type="text" 
                     name="contact" 
+                    maxLength={FIELD_LIMITS.FEEDBACK_CONTACT}
                     value={feedback.contact} 
                     onChange={handleFeedbackChange} 
                     className="w-full p-3 bg-slate-950 border border-slate-800 text-slate-200 placeholder-slate-600 rounded-xl focus:ring-1 focus:ring-teal-500 focus:border-teal-500 focus:outline-none transition-colors text-sm" 
@@ -524,6 +568,7 @@ export default function App() {
                   <label className="block text-xs md:text-sm font-medium text-slate-300 mb-1.5">Message</label>
                   <textarea 
                     name="message" 
+                    maxLength={FIELD_LIMITS.FEEDBACK_MESSAGE}
                     value={feedback.message} 
                     onChange={handleFeedbackChange} 
                     rows="4" 
@@ -546,7 +591,9 @@ export default function App() {
                   <p className="text-teal-400 text-xs md:text-sm text-center font-medium mt-3">✨ Thank you! Your feedback has been sent.</p>
                 )}
                 {formStatus === 'error' && (
-                  <p className="text-red-400 text-xs md:text-sm text-center font-medium mt-3">Oops! Something went wrong. Please try again later.</p>
+                  <p role="alert" className="text-red-400 text-xs md:text-sm text-center font-medium mt-3">
+                    {feedbackError || 'Oops! Something went wrong. Please try again later.'}
+                  </p>
                 )}
               </form>
             </div>
@@ -555,51 +602,18 @@ export default function App() {
 
           {/* Mobile Only: Social Icons at the bottom */}
           <div className="flex md:hidden justify-center items-center gap-4 mt-6">
-            <a
-              href="https://eldionryanportfolio.vercel.app"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Portfolio"
-              className="w-12 h-12 rounded-2xl bg-slate-900/90 backdrop-blur-md border border-slate-800 active:border-teal-500/50 flex items-center justify-center text-slate-300 hover:text-teal-400 active:scale-95 transition-all shadow-lg"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-              </svg>
-            </a>
-
-            <a
-              href="https://github.com/ElXprogramming"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="GitHub"
-              className="w-12 h-12 rounded-2xl bg-slate-900/90 backdrop-blur-md border border-slate-800 active:border-teal-500/50 flex items-center justify-center text-slate-300 hover:text-teal-400 active:scale-95 transition-all shadow-lg"
-            >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
-              </svg>
-            </a>
-
-            <a
-              href="https://www.linkedin.com/in/eldion-ryan-godius-897064235"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="LinkedIn"
-              className="w-12 h-12 rounded-2xl bg-slate-900/90 backdrop-blur-md border border-slate-800 active:border-teal-500/50 flex items-center justify-center text-slate-300 hover:text-teal-400 active:scale-95 transition-all shadow-lg"
-            >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-              </svg>
-            </a>
-
-            <a
-              href="mailto:nayrnoidle@gmail.com"
-              aria-label="Email"
-              className="w-12 h-12 rounded-2xl bg-slate-900/90 backdrop-blur-md border border-slate-800 active:border-teal-500/50 flex items-center justify-center text-slate-300 hover:text-teal-400 active:scale-95 transition-all shadow-lg"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-            </a>
+            {SOCIAL_LINKS.map((item) => (
+              <a
+                key={item.label}
+                href={item.href}
+                target={item.external ? '_blank' : undefined}
+                rel={item.external ? 'noopener noreferrer' : undefined}
+                aria-label={item.label}
+                className="w-12 h-12 rounded-2xl bg-slate-900/90 backdrop-blur-md border border-slate-800 active:border-teal-500/50 flex items-center justify-center text-slate-300 hover:text-teal-400 active:scale-95 transition-all shadow-lg"
+              >
+                {item.icon}
+              </a>
+            ))}
           </div>
         </section>
 

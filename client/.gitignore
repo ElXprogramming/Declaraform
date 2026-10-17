@@ -7,7 +7,10 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# feedback url : https://docs.google.com/spreadsheets/d/1Vh2Fu2nOtIQ_DivZRgN16a2s2IsCkz11ST4zSKwo0dI/edit?gid=0#gid=0
+# Environment Variables & Secrets (Never commit .env files)
+.env
+.env.*
+!.env.example
 
 node_modules
 dist
