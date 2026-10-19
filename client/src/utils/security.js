@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import DOMPurify from 'dompurify';
-import { ASSESSMENT_TYPES, FEEDBACK_CATEGORIES, GROUP_MEMBER_COUNT } from './constants';
+import { ASSESSMENT_TYPES, FEEDBACK_CATEGORIES, GROUP_MEMBER_COUNT } from './constants.js';
 
 // ============================================================================
 // 1. CONSTANTS & LIMITS
@@ -341,9 +341,19 @@ export async function validatePdfUpload(file) {
 
   const fileName = typeof file.name === 'string' ? file.name : '';
   const hasPdfExt = /\.pdf$/i.test(fileName);
-  const hasPdfMime = file.type === 'application/pdf';
+  const mimeLower = typeof file.type === 'string' ? file.type.toLowerCase().trim() : '';
+  const ALLOWED_PDF_MIMES = new Set([
+    'application/pdf',
+    'application/x-pdf',
+    'application/acrobat',
+    'applications/vnd.pdf',
+    'text/pdf',
+    'application/octet-stream',
+    '',
+  ]);
+  const hasAllowedMime = ALLOWED_PDF_MIMES.has(mimeLower);
 
-  if (!hasPdfExt || !hasPdfMime) {
+  if (!hasPdfExt || !hasAllowedMime) {
     return { valid: false, error: 'Only valid PDF (.pdf) files are allowed.' };
   }
 

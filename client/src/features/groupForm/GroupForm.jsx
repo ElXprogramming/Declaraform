@@ -39,8 +39,7 @@ export default function GroupForm() {
   const previewUrl = isSafeBlobUrl(rawPreviewUrl) ? rawPreviewUrl : null;
   const previewPages = (previewData?.pages || []).filter(isSafeBlobUrl);
 
-  // Only non-PII course metadata is persisted to sessionStorage by useBrowserStorage;
-  // Leader & member PII and signatures remain strictly in volatile React memory.
+  // Draft is kept in volatile sessionStorage: survives page refresh, cleared when the tab closes.
   const [formData, setFormData] = useBrowserStorage(
     STORAGE_KEYS.GROUP_DRAFT,
     () => ({
@@ -57,7 +56,14 @@ export default function GroupForm() {
       date: new Date().toISOString().split('T')[0],
       members: Array.from({ length: GROUP_MEMBER_COUNT }, () => ({ ...EMPTY_MEMBER })),
     }),
-    { type: 'session' }
+    {
+      type: 'session',
+      fallback: (data) => ({
+        ...data,
+        signature: null,
+        members: (data.members || []).map((m) => ({ ...m, signature: null })),
+      }),
+    }
   );
 
   const safeLeaderSignature = isSafeSignatureDataUrl(formData.signature) ? formData.signature : null;

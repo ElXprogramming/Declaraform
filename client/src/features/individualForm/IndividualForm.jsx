@@ -22,8 +22,7 @@ const FIELD_MAX_LENGTH_MAP = {
 };
 
 export default function IndividualForm() {
-  // Only non-PII course metadata is persisted to sessionStorage by useBrowserStorage;
-  // PII (fullName, matricNo, phoneEmail, icPassport, signature) remains strictly in React memory.
+  // Draft is kept in volatile sessionStorage: survives page refresh, cleared when the tab closes.
   const [formData, setFormData] = useBrowserStorage(
     STORAGE_KEYS.INDIVIDUAL_DRAFT,
     () => ({
@@ -39,7 +38,10 @@ export default function IndividualForm() {
       date: new Date().toISOString().split('T')[0],
       signature: null,
     }),
-    { type: 'session' }
+    {
+      type: 'session',
+      fallback: (data) => ({ ...data, signature: null }),
+    }
   );
 
   const [previewUrl, setPreviewUrl] = useState(null);

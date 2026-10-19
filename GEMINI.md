@@ -7,7 +7,7 @@ Never write insecure "placeholder" code. Apply the following mandatory security 
 ### 1. React Frontend & DOM Security (XSS & Injection Prevention)
 * **No Raw HTML Injection:** Never use `dangerouslySetInnerHTML`, `eval()`, `Function()`, or direct DOM manipulation (`innerHTML`, `outerHTML`, `document.write`). If rendering rich text/HTML is strictly required, sanitize it first using `DOMPurify`.
 * **URL & Navigation Validation:** Validate and sanitize all dynamic URLs passed to `href`, `src`, or router navigation to block `javascript:`, `data:`, and `vbscript:` URI schemes, as well as open redirects.
-* **Client-Side Storage:** Never store sensitive tokens (refresh tokens, raw JWTs), PII, or API secrets in `localStorage`, `sessionStorage`, or React state persisted to disk.
+* **Client-Side Storage:** Never store sensitive tokens (refresh tokens, raw JWTs) or backend secrets in Web Storage. Form drafts with user inputs must never be persisted to permanent disk storage (`localStorage`), but may use ephemeral, per-tab `sessionStorage` with strict schema validation and sanitization so that drafts survive reloads without lingering on disk.
 * **Environment Variables:** Never prefix private keys, database URIs, or backend secrets with `VITE_` or `REACT_APP_`. Treat anything bundled into the React client as publicly visible. Ensure `.env` files are ignored in `.gitignore` and validate environment variables at startup.
 
 ### 2. Authentication, Session & Access Control

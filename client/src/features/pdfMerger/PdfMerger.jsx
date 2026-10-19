@@ -1,6 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { mergeMultiplePdfs } from '../pdfGeneration/generatePdf';
-import { UPLOAD_LIMITS, isSafeBlobUrl, validatePdfUpload } from '../../utils/security';
+import { UPLOAD_LIMITS, isSafeBlobUrl, validatePdfUpload, logSafeError } from '../../utils/security';
+import {
+  savePdfsToStorage,
+  loadPdfsFromStorage,
+  clearPdfsFromStorage,
+} from '../../utils/pdfStorage.js';
 
 export default function PdfMerger() {
   const [files, setFiles] = useState([]);
@@ -9,6 +14,7 @@ export default function PdfMerger() {
   const [previewPage, setPreviewPage] = useState('both'); // 'both' | number (1-based)
   const [mobileTab, setMobileTab] = useState('files');
   const [errorMessage, setErrorMessage] = useState('');
+  const [isStorageLoaded, setIsStorageLoaded] = useState(false);
 
   // Drag states for reordering and uploading
   const [draggedIndex, setDraggedIndex] = useState(null);
@@ -17,6 +23,36 @@ export default function PdfMerger() {
 
   const prevUrlsRef = useRef([]);
   const touchStartRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  // Restore uploaded files from IndexedDB on initial mount
+  useEffect(() => {
+    let isCancelled = false;
+    async function restoreFiles() {
+      try {
+        const stored = await loadPdfsFromStorage();
+        if (!isCancelled && stored.length > 0) {
+          setFiles(stored);
+        }
+      } catch (err) {
+        logSafeError('PdfMerger.restoreFiles', err);
+      } finally {
+        if (!isCancelled) {
+          setIsStorageLoaded(true);
+        }
+      }
+    }
+    restoreFiles();
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
+  // Sync files to IndexedDB whenever files change
+  useEffect(() => {
+    if (!isStorageLoaded) return;
+    savePdfsToStorage(files);
+  }, [files, isStorageLoaded]);
 
   const rawMergedUrl = mergedData?.url;
   const mergedUrl = isSafeBlobUrl(rawMergedUrl) ? rawMergedUrl : null;
@@ -144,6 +180,7 @@ export default function PdfMerger() {
     setFiles([]);
     setMergedData(null);
     setErrorMessage('');
+    clearPdfsFromStorage();
   };
 
   // HTML5 Drag & Drop handlers for rearranging
@@ -282,7 +319,16 @@ export default function PdfMerger() {
           </div>
           
           {/* Upload Area with Drag & Drop */}
-          <label 
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => fileInputRef.current?.click()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                fileInputRef.current?.click();
+              }
+            }}
             onDragOver={handleUploadDragOver}
             onDragLeave={handleUploadDragLeave}
             onDrop={handleUploadDrop}
@@ -309,13 +355,14 @@ export default function PdfMerger() {
               Valid PDFs only • Max 25 MB per file (up to 20 files)
             </span>
             <input 
+              ref={fileInputRef}
               type="file" 
               multiple 
               accept=".pdf,application/pdf" 
               className="hidden" 
               onChange={handleFileChange} 
             />
-          </label>
+          </div>
 
           {errorMessage && (
             <p role="alert" className="text-xs text-red-400 mb-3 font-medium bg-red-950/40 border border-red-800/50 rounded-lg px-3 py-2">
@@ -349,12 +396,26 @@ export default function PdfMerger() {
           {/* Draggable File List */}
           <div className="flex-grow overflow-y-auto custom-scrollbar pr-1 space-y-2 mb-4">
             {files.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 px-4 text-center border border-dashed border-slate-800 rounded-xl bg-slate-900/30">
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => fileInputRef.current?.click()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    fileInputRef.current?.click();
+                  }
+                }}
+                onDragOver={handleUploadDragOver}
+                onDragLeave={handleUploadDragLeave}
+                onDrop={handleUploadDrop}
+                className="flex flex-col items-center justify-center py-10 px-4 text-center border border-dashed border-slate-800 hover:border-teal-500/60 rounded-xl bg-slate-900/30 cursor-pointer transition-colors"
+              >
                 <svg className="w-8 h-8 text-slate-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 <p className="text-sm text-slate-400 font-medium">No files selected yet</p>
-                <p className="text-xs text-slate-500 mt-1">Upload at least 2 PDFs above to arrange and merge</p>
+                <p className="text-xs text-slate-500 mt-1">Upload or drop at least 2 PDFs to arrange and merge</p>
               </div>
             ) : (
               files.map((item, idx) => {

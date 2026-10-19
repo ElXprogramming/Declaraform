@@ -112,8 +112,26 @@ const ALLOWED_TABS = new Set(['individual', 'group', 'merge']);
 const ALLOWED_MOBILE_SCREENS = new Set(['home', 'forms', 'merge', 'about', 'contact']);
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('individual');
-  const [mobileScreen, setMobileScreen] = useState('home'); // 'home' | 'forms' | 'merge' | 'about' | 'contact'
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      const saved = typeof window !== 'undefined' ? window.sessionStorage?.getItem('declaraform:activeTab') : null;
+      if (saved && ALLOWED_TABS.has(saved)) return saved;
+    } catch {
+      /* ignore */
+    }
+    return 'individual';
+  });
+
+  const [mobileScreen, setMobileScreen] = useState(() => {
+    try {
+      const saved = typeof window !== 'undefined' ? window.sessionStorage?.getItem('declaraform:mobileScreen') : null;
+      if (saved && ALLOWED_MOBILE_SCREENS.has(saved)) return saved;
+    } catch {
+      /* ignore */
+    }
+    return 'home';
+  });
+
   const pageRef = useRef(null);
   useScrollAnimations(pageRef);
 
@@ -125,18 +143,28 @@ export default function App() {
   const handleSafeTabChange = (nextTab) => {
     if (ALLOWED_TABS.has(nextTab)) {
       setActiveTab(nextTab);
+      try {
+        window.sessionStorage?.setItem('declaraform:activeTab', nextTab);
+      } catch {
+        /* ignore */
+      }
     }
   };
 
   const handleMobileScreenChange = (screen, tab) => {
     if (!ALLOWED_MOBILE_SCREENS.has(screen)) return;
     setMobileScreen(screen);
+    try {
+      window.sessionStorage?.setItem('declaraform:mobileScreen', screen);
+    } catch {
+      /* ignore */
+    }
     if (tab && ALLOWED_TABS.has(tab)) {
-      setActiveTab(tab);
+      handleSafeTabChange(tab);
     } else if (screen === 'forms' && activeTab === 'merge') {
-      setActiveTab('individual');
+      handleSafeTabChange('individual');
     } else if (screen === 'merge') {
-      setActiveTab('merge');
+      handleSafeTabChange('merge');
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -408,9 +436,15 @@ export default function App() {
           )}
 
           <main data-reveal className="bg-slate-900/80 backdrop-blur-md p-4 sm:p-6 md:p-8 rounded-2xl shadow-2xl border border-slate-800">
-            {activeTab === 'individual' && <IndividualForm />}
-            {activeTab === 'group' && <GroupForm />}
-            {activeTab === 'merge' && <PdfMerger />}
+            <div className={activeTab === 'individual' ? 'block' : 'hidden'}>
+              <IndividualForm />
+            </div>
+            <div className={activeTab === 'group' ? 'block' : 'hidden'}>
+              <GroupForm />
+            </div>
+            <div className={activeTab === 'merge' ? 'block' : 'hidden'}>
+              <PdfMerger />
+            </div>
           </main>
         </section>
 
