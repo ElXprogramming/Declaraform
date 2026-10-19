@@ -21,7 +21,7 @@ export default function useScrollAnimations(scopeRef) {
     const mm = gsap.matchMedia();
 
     // Desktop: full scroll reveal with ScrollTrigger
-    mm.add('(min-width: 768px) and (prefers-reduced-motion: no-preference)', () => {
+    mm.add('(min-width: 1024px) and (prefers-reduced-motion: no-preference)', () => {
       // Hero: plays immediately since it is already on screen.
       gsap.from('[data-hero]', {
         opacity: 0,
@@ -34,10 +34,10 @@ export default function useScrollAnimations(scopeRef) {
 
       // Everything else: reveal on scroll.
       const revealEls = gsap.utils.toArray('[data-reveal]');
-      gsap.set(revealEls, { opacity: 0, y: 40 });
+      gsap.set(revealEls, { opacity: 0, y: 30 });
 
       ScrollTrigger.batch(revealEls, {
-        start: 'top 88%',
+        start: 'top 95%',
         once: true,
         onEnter: (batch) =>
           gsap.to(batch, {
@@ -52,8 +52,8 @@ export default function useScrollAnimations(scopeRef) {
       });
     }, scopeRef);
 
-    // Mobile: quick entrance for hero without hiding tabbed sections
-    mm.add('(max-width: 767px) and (prefers-reduced-motion: no-preference)', () => {
+    // Mobile & Tablet (including iPads): quick entrance for hero without hiding tabbed sections
+    mm.add('(max-width: 1023px) and (prefers-reduced-motion: no-preference)', () => {
       gsap.from('[data-hero]', {
         opacity: 0,
         y: 20,

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { generateGroupForm } from '../pdfGeneration/generatePdf';
 import SignatureCanvas from '../../components/form/SignatureCanvas';
+import PdfPreviewCanvas from '../../components/common/PdfPreviewCanvas';
 import useBrowserStorage from '../../hooks/useBrowserStorage';
 import { ASSESSMENT_TYPES, GROUP_MEMBER_COUNT, STORAGE_KEYS } from '../../utils/constants';
 import {
@@ -36,6 +37,7 @@ export default function GroupForm() {
   const [mobileTab, setMobileTab] = useState('form');
 
   const rawPreviewUrl = previewData?.url;
+  const previewBytes = previewData?.bytes;
   const previewUrl = isSafeBlobUrl(rawPreviewUrl) ? rawPreviewUrl : null;
   const previewPages = (previewData?.pages || []).filter(isSafeBlobUrl);
 
@@ -529,26 +531,20 @@ export default function GroupForm() {
                       <span>Page 1: Leader & Declaration</span>
                       <span className="text-slate-400 font-normal">1 of 2</span>
                     </div>
-                    <iframe
-                      src={`${previewPages[0] || previewUrl}#toolbar=0&navpanes=0&view=Fit`}
-                      className="w-full h-[520px] sm:h-[600px] lg:h-[700px] border-0"
-                      title="Group Declaration Page 1"
-                    />
+                    <div className="w-full p-2 bg-slate-950 flex items-center justify-center">
+                      <PdfPreviewCanvas url={previewPages[0] || previewUrl} bytes={previewBytes} pageNumber={1} />
+                    </div>
                   </div>
 
-                  {previewPages[1] && (
-                    <div className="flex flex-col bg-slate-900 rounded-lg overflow-hidden border border-slate-800 shadow-md">
-                      <div className="px-3 py-1.5 bg-slate-800/90 text-[11px] font-bold text-teal-400 flex justify-between items-center">
-                        <span>Page 2: Group Members Table</span>
-                        <span className="text-slate-400 font-normal">2 of 2</span>
-                      </div>
-                      <iframe
-                        src={`${previewPages[1]}#toolbar=0&navpanes=0&view=Fit`}
-                        className="w-full h-[520px] sm:h-[600px] lg:h-[700px] border-0"
-                        title="Group Declaration Page 2"
-                      />
+                  <div className="flex flex-col bg-slate-900 rounded-lg overflow-hidden border border-slate-800 shadow-md">
+                    <div className="px-3 py-1.5 bg-slate-800/90 text-[11px] font-bold text-teal-400 flex justify-between items-center">
+                      <span>Page 2: Group Members Table</span>
+                      <span className="text-slate-400 font-normal">2 of 2</span>
                     </div>
-                  )}
+                    <div className="w-full p-2 bg-slate-950 flex items-center justify-center">
+                      <PdfPreviewCanvas url={previewPages[1] || previewUrl} bytes={previewBytes} pageNumber={2} />
+                    </div>
+                  </div>
                 </>
               ) : previewPage === 1 ? (
                 <div className="flex flex-col h-full min-h-[520px] lg:min-h-0 bg-slate-900 rounded-lg overflow-hidden border border-slate-800 shadow-md">
@@ -556,11 +552,9 @@ export default function GroupForm() {
                     <span>Page 1: Leader & Declaration</span>
                     <span className="text-slate-400 font-normal">1 of 2</span>
                   </div>
-                  <iframe
-                    src={`${previewPages[0] || previewUrl}#toolbar=0&navpanes=0&view=Fit`}
-                    className="w-full flex-grow h-[520px] sm:h-[600px] lg:h-full border-0"
-                    title="Group Declaration Page 1"
-                  />
+                  <div className="w-full flex-grow p-2 bg-slate-950 flex items-center justify-center overflow-y-auto custom-scrollbar">
+                    <PdfPreviewCanvas url={previewPages[0] || previewUrl} bytes={previewBytes} pageNumber={1} />
+                  </div>
                 </div>
               ) : (
                 <div className="flex flex-col h-full min-h-[520px] lg:min-h-0 bg-slate-900 rounded-lg overflow-hidden border border-slate-800 shadow-md">
@@ -568,11 +562,9 @@ export default function GroupForm() {
                     <span>Page 2: Group Members Table</span>
                     <span className="text-slate-400 font-normal">2 of 2</span>
                   </div>
-                  <iframe
-                    src={`${previewPages[1] || previewUrl}#toolbar=0&navpanes=0&view=Fit`}
-                    className="w-full flex-grow h-[520px] sm:h-[600px] lg:h-full border-0"
-                    title="Group Declaration Page 2"
-                  />
+                  <div className="w-full flex-grow p-2 bg-slate-950 flex items-center justify-center overflow-y-auto custom-scrollbar">
+                    <PdfPreviewCanvas url={previewPages[1] || previewUrl} bytes={previewBytes} pageNumber={2} />
+                  </div>
                 </div>
               )
             ) : (

@@ -141,7 +141,10 @@ export const generateIndividualForm = async (rawFormData) => {
     });
 
     const pdfBytes = await pdfDoc.save();
-    return createPdfBlobUrl(pdfBytes);
+    return {
+      url: createPdfBlobUrl(pdfBytes),
+      bytes: pdfBytes,
+    };
   } catch (error) {
     logSafeError('generateIndividualForm', error);
     return null;
@@ -225,6 +228,7 @@ export const generateGroupForm = async (rawFormData) => {
 
     return {
       url: fullUrl,
+      bytes: pdfBytes,
       pages,
     };
   } catch (error) {
@@ -270,6 +274,7 @@ export const mergeMultiplePdfs = async (fileList) => {
 
     return {
       url: fullUrl,
+      bytes: pdfBytes,
       pageCount: totalPages,
       pages: pageUrls,
     };

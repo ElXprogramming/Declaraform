@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { generateIndividualForm } from '../pdfGeneration/generatePdf';
 import SignatureCanvas from '../../components/form/SignatureCanvas';
+import PdfPreviewCanvas from '../../components/common/PdfPreviewCanvas';
 import useBrowserStorage from '../../hooks/useBrowserStorage';
 import { ASSESSMENT_TYPES, STORAGE_KEYS } from '../../utils/constants';
 import {
@@ -44,24 +45,26 @@ export default function IndividualForm() {
     }
   );
 
-  const [previewUrl, setPreviewUrl] = useState(null);
+  const [previewData, setPreviewData] = useState(null);
   const [mobileTab, setMobileTab] = useState('form');
   const prevUrlRef = useRef(null);
 
-  const safePreviewUrl = isSafeBlobUrl(previewUrl) ? previewUrl : null;
+  const rawPreviewUrl = previewData?.url;
+  const previewBytes = previewData?.bytes;
+  const safePreviewUrl = isSafeBlobUrl(rawPreviewUrl) ? rawPreviewUrl : null;
   const safeSignatureUrl = isSafeSignatureDataUrl(formData.signature) ? formData.signature : null;
   const safeDownloadName = `Declaration_${sanitizeDownloadFilename(formData.matricNo, 'Form')}.pdf`;
 
   useEffect(() => {
     let isCancelled = false;
     const timer = setTimeout(async () => {
-      const url = await generateIndividualForm(formData);
-      if (!isCancelled && url && isSafeBlobUrl(url)) {
-        if (prevUrlRef.current && prevUrlRef.current !== url) {
+      const result = await generateIndividualForm(formData);
+      if (!isCancelled && result?.url && isSafeBlobUrl(result.url)) {
+        if (prevUrlRef.current && prevUrlRef.current !== result.url) {
           URL.revokeObjectURL(prevUrlRef.current);
         }
-        prevUrlRef.current = url;
-        setPreviewUrl(url);
+        prevUrlRef.current = result.url;
+        setPreviewData(result);
       }
     }, 500);
     return () => {
@@ -349,11 +352,9 @@ export default function IndividualForm() {
                   <span>Individual Declaration Form</span>
                   <span className="text-slate-400 font-normal">Page 1 of 1</span>
                 </div>
-                <iframe 
-                  src={`${safePreviewUrl}#toolbar=0&navpanes=0&view=Fit`} 
-                  className="w-full flex-grow h-[520px] sm:h-[600px] lg:h-full border-0"
-                  title="Individual Declaration Preview"
-                />
+                <div className="w-full flex-grow flex items-center justify-center p-2 bg-slate-950 overflow-y-auto custom-scrollbar">
+                  <PdfPreviewCanvas url={safePreviewUrl} bytes={previewBytes} pageNumber={1} />
+                </div>
               </div>
             ) : (
               <div className="flex items-center justify-center flex-grow h-48 lg:h-full text-slate-500 text-sm">

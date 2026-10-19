@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { mergeMultiplePdfs } from '../pdfGeneration/generatePdf';
+import PdfPreviewCanvas from '../../components/common/PdfPreviewCanvas';
 import { UPLOAD_LIMITS, isSafeBlobUrl, validatePdfUpload, logSafeError } from '../../utils/security';
 import {
   savePdfsToStorage,
@@ -55,6 +56,7 @@ export default function PdfMerger() {
   }, [files, isStorageLoaded]);
 
   const rawMergedUrl = mergedData?.url;
+  const mergedBytes = mergedData?.bytes;
   const mergedUrl = isSafeBlobUrl(rawMergedUrl) ? rawMergedUrl : null;
   const mergedPages = (mergedData?.pages || []).filter(isSafeBlobUrl);
   const totalPages = mergedData?.pageCount || mergedPages.length || (mergedUrl ? 1 : 0);
@@ -621,11 +623,9 @@ export default function PdfMerger() {
                       <span>Merged Document Page {i + 1}</span>
                       <span className="text-slate-400 font-normal">{i + 1} of {totalPages}</span>
                     </div>
-                    <iframe
-                      src={`${pageUrl}#toolbar=0&navpanes=0&view=Fit`}
-                      className="w-full h-[520px] sm:h-[600px] lg:h-[700px] border-0"
-                      title={`Merged Document Page ${i + 1}`}
-                    />
+                    <div className="w-full p-2 bg-slate-950 flex items-center justify-center">
+                      <PdfPreviewCanvas url={pageUrl} bytes={mergedBytes} pageNumber={i + 1} />
+                    </div>
                   </div>
                 ))
               ) : (
@@ -640,11 +640,13 @@ export default function PdfMerger() {
                       {typeof previewPage === 'number' ? `${previewPage} of ${totalPages}` : `${totalPages} Page${totalPages > 1 ? 's' : ''}`}
                     </span>
                   </div>
-                  <iframe
-                    src={`${(typeof previewPage === 'number' && mergedPages[previewPage - 1]) || mergedUrl}#toolbar=0&navpanes=0&view=Fit`}
-                    className="w-full flex-grow h-[520px] sm:h-[600px] lg:h-full border-0"
-                    title="Merged PDF Preview"
-                  />
+                  <div className="w-full flex-grow p-2 bg-slate-950 flex items-center justify-center overflow-y-auto custom-scrollbar">
+                    <PdfPreviewCanvas
+                      url={(typeof previewPage === 'number' && mergedPages[previewPage - 1]) || mergedUrl}
+                      bytes={mergedBytes}
+                      pageNumber={typeof previewPage === 'number' ? previewPage : 1}
+                    />
+                  </div>
                 </div>
               )
             ) : (

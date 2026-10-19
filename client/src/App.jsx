@@ -378,7 +378,7 @@ export default function App() {
             mobileScreen === 'forms' || mobileScreen === 'merge' ? 'block' : 'hidden md:block'
           }`}
         >
-          <header data-reveal className="mb-6 md:mb-8 text-center drop-shadow-md">
+          <header className="mb-6 md:mb-8 text-center drop-shadow-md">
             <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-1.5 md:mb-2">
               {mobileScreen === 'merge' ? 'PDF Merger' : 'Form Generator'}
             </h2>
@@ -390,7 +390,7 @@ export default function App() {
           </header>
 
           {/* Desktop Tab Bar (All 3 tabs) */}
-          <div data-reveal className="hidden md:flex justify-center mb-6 border-b border-slate-700">
+          <div className="hidden md:flex justify-center mb-6 border-b border-slate-700">
             {DESKTOP_TABS.map((tab) => (
               <button
                 key={tab.id}
@@ -435,7 +435,7 @@ export default function App() {
             </div>
           )}
 
-          <main data-reveal className="bg-slate-900/80 backdrop-blur-md p-4 sm:p-6 md:p-8 rounded-2xl shadow-2xl border border-slate-800">
+          <main className="bg-slate-900/80 backdrop-blur-md p-4 sm:p-6 md:p-8 rounded-2xl shadow-2xl border border-slate-800">
             <div className={activeTab === 'individual' ? 'block' : 'hidden'}>
               <IndividualForm />
             </div>
