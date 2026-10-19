@@ -9,12 +9,22 @@ export default function PdfMerger() {
   const [previewPage, setPreviewPage] = useState('both'); // 'both' | number (1-based)
   const [mobileTab, setMobileTab] = useState('files');
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Drag states for reordering and uploading
+  const [draggedIndex, setDraggedIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+  const [isUploadDragging, setIsUploadDragging] = useState(false);
+
   const prevUrlsRef = useRef([]);
+  const touchStartRef = useRef(null);
 
   const rawMergedUrl = mergedData?.url;
   const mergedUrl = isSafeBlobUrl(rawMergedUrl) ? rawMergedUrl : null;
   const mergedPages = (mergedData?.pages || []).filter(isSafeBlobUrl);
   const totalPages = mergedData?.pageCount || mergedPages.length || (mergedUrl ? 1 : 0);
+
+  const totalBytes = files.reduce((sum, item) => sum + (item.file?.size || 0), 0);
+  const totalMb = (totalBytes / (1024 * 1024)).toFixed(1);
 
   useEffect(() => {
     return () => {
@@ -22,19 +32,16 @@ export default function PdfMerger() {
     };
   }, []);
 
-  const handleFileChange = async (e) => {
+  const processFiles = async (selected) => {
     setErrorMessage('');
-    const selected = Array.from(e.target.files || []);
-    e.target.value = '';
-    if (selected.length === 0) return;
+    if (!selected || selected.length === 0) return;
 
     if (files.length + selected.length > UPLOAD_LIMITS.MAX_PDF_FILES) {
       setErrorMessage(`You can merge at most ${UPLOAD_LIMITS.MAX_PDF_FILES} PDF files at once.`);
       return;
     }
 
-    const currentBytes = files.reduce((sum, item) => sum + item.file.size, 0);
-    let runningBytes = currentBytes;
+    let runningBytes = totalBytes;
     const validItems = [];
     const errors = [];
 
@@ -67,21 +74,144 @@ export default function PdfMerger() {
     }
   };
 
-  const moveFile = (index, direction) => {
-    const newFiles = [...files];
-    if (direction === 'up' && index > 0) {
-      [newFiles[index - 1], newFiles[index]] = [newFiles[index], newFiles[index - 1]];
-    } else if (direction === 'down' && index < newFiles.length - 1) {
-      [newFiles[index + 1], newFiles[index]] = [newFiles[index], newFiles[index + 1]];
+  const handleFileChange = async (e) => {
+    const selected = Array.from(e.target.files || []);
+    e.target.value = '';
+    await processFiles(selected);
+  };
+
+  const handleUploadDragOver = (e) => {
+    if (e.dataTransfer?.types?.includes('Files')) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      setIsUploadDragging(true);
     }
-    setFiles(newFiles);
-    setMergedData(null);
+  };
+
+  const handleUploadDragLeave = (e) => {
+    e.preventDefault();
+    setIsUploadDragging(false);
+  };
+
+  const handleUploadDrop = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsUploadDragging(false);
+    if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+      const droppedFiles = Array.from(e.dataTransfer.files);
+      await processFiles(droppedFiles);
+    }
+  };
+
+  // Safe reordering logic
+  const reorderFiles = (sourceIndex, targetIndex) => {
+    if (
+      typeof sourceIndex !== 'number' ||
+      typeof targetIndex !== 'number' ||
+      sourceIndex === targetIndex ||
+      sourceIndex < 0 ||
+      targetIndex < 0 ||
+      sourceIndex >= files.length ||
+      targetIndex >= files.length
+    ) {
+      return;
+    }
+
+    setFiles((prev) => {
+      const next = [...prev];
+      const [movedItem] = next.splice(sourceIndex, 1);
+      next.splice(targetIndex, 0, movedItem);
+      return next;
+    });
+    setMergedData(null); // Invalidate outdated preview on reorder
+  };
+
+  const moveFile = (index, direction) => {
+    if (direction === 'up' && index > 0) {
+      reorderFiles(index, index - 1);
+    } else if (direction === 'down' && index < files.length - 1) {
+      reorderFiles(index, index + 1);
+    }
   };
 
   const removeFile = (index) => {
-    setFiles(files.filter((_, i) => i !== index));
+    setFiles((prev) => prev.filter((_, i) => i !== index));
     setMergedData(null);
     setErrorMessage('');
+  };
+
+  const clearAllFiles = () => {
+    setFiles([]);
+    setMergedData(null);
+    setErrorMessage('');
+  };
+
+  // HTML5 Drag & Drop handlers for rearranging
+  const handleItemDragStart = (e, index) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+  };
+
+  const handleItemDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleItemDrop = (e, targetIndex) => {
+    e.preventDefault();
+    if (draggedIndex !== null && draggedIndex !== targetIndex) {
+      reorderFiles(draggedIndex, targetIndex);
+    }
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleItemDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  // Touch reordering handlers (for mobile & touchscreens)
+  const handleTouchStart = (e, index) => {
+    const touch = e.touches[0];
+    touchStartRef.current = {
+      startIndex: index,
+      startY: touch.clientY,
+    };
+    setDraggedIndex(index);
+    setDragOverIndex(index);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!touchStartRef.current) return;
+    const touch = e.touches[0];
+    const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
+    const cardEl = targetEl?.closest('[data-file-index]');
+    if (cardEl) {
+      const idxAttr = cardEl.getAttribute('data-file-index');
+      if (idxAttr !== null) {
+        const targetIdx = parseInt(idxAttr, 10);
+        if (!isNaN(targetIdx) && targetIdx >= 0 && targetIdx < files.length) {
+          setDragOverIndex(targetIdx);
+        }
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStartRef.current) {
+      const srcIdx = touchStartRef.current.startIndex;
+      if (dragOverIndex !== null && dragOverIndex !== srcIdx) {
+        reorderFiles(srcIdx, dragOverIndex);
+      }
+    }
+    touchStartRef.current = null;
+    setDraggedIndex(null);
+    setDragOverIndex(null);
   };
 
   const handleMerge = async () => {
@@ -140,16 +270,51 @@ export default function PdfMerger() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:h-[80vh] min-h-0">
         
-        {/* LEFT COLUMN: Uploader & List */}
+        {/* LEFT COLUMN: Uploader & Draggable Reorder List */}
         <div className={`flex flex-col h-full lg:max-h-full ${mobileTab === 'files' ? 'flex' : 'hidden lg:flex'}`}>
-          <h2 className="text-xl font-bold text-slate-100 border-b border-slate-700 pb-2 mb-4">Upload PDFs</h2>
+          <div className="flex items-center justify-between border-b border-slate-700 pb-2 mb-4">
+            <h2 className="text-xl font-bold text-slate-100">Upload & Arrange PDFs</h2>
+            {files.length > 0 && (
+              <span className="text-xs font-semibold text-teal-400 bg-teal-950/60 border border-teal-800/60 px-2.5 py-1 rounded-full">
+                {files.length} {files.length === 1 ? 'file' : 'files'} ({totalMb} MB)
+              </span>
+            )}
+          </div>
           
-          {/* Upload Area */}
-          <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-600 hover:border-teal-500 rounded-xl p-8 bg-slate-900/50 cursor-pointer transition-colors mb-4 group">
-            <svg className="w-10 h-10 text-slate-400 group-hover:text-teal-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-            <span className="text-sm font-medium text-slate-300 group-hover:text-teal-400">Click to browse or drag PDF files here</span>
-            <span className="text-xs text-slate-500 mt-1">Valid PDFs only • Max 25 MB per file (up to 20 files)</span>
-            <input type="file" multiple accept=".pdf,application/pdf" className="hidden" onChange={handleFileChange} />
+          {/* Upload Area with Drag & Drop */}
+          <label 
+            onDragOver={handleUploadDragOver}
+            onDragLeave={handleUploadDragLeave}
+            onDrop={handleUploadDrop}
+            className={`flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-6 sm:p-7 cursor-pointer transition-all mb-4 group ${
+              isUploadDragging 
+                ? 'border-teal-400 bg-teal-950/40 ring-2 ring-teal-500/40 scale-[1.01]' 
+                : 'border-slate-700 hover:border-teal-500 bg-slate-900/50'
+            }`}
+          >
+            <svg 
+              className={`w-10 h-10 mb-2 transition-colors ${
+                isUploadDragging ? 'text-teal-400 animate-bounce' : 'text-slate-400 group-hover:text-teal-400'
+              }`} 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            <span className="text-sm font-medium text-slate-300 group-hover:text-teal-400 text-center">
+              {isUploadDragging ? 'Drop PDF files here' : 'Click to browse or drag PDF files here'}
+            </span>
+            <span className="text-xs text-slate-500 mt-1 text-center">
+              Valid PDFs only • Max 25 MB per file (up to 20 files)
+            </span>
+            <input 
+              type="file" 
+              multiple 
+              accept=".pdf,application/pdf" 
+              className="hidden" 
+              onChange={handleFileChange} 
+            />
           </label>
 
           {errorMessage && (
@@ -158,41 +323,161 @@ export default function PdfMerger() {
             </p>
           )}
 
-          {/* File List */}
-          <div className="flex-grow overflow-y-auto custom-scrollbar pr-2 space-y-2 mb-4">
+          {/* Draggable File List Header */}
+          <div className="flex items-center justify-between text-xs text-slate-400 mb-2 px-1">
+            <span className="font-semibold text-slate-300">
+              File Merge Sequence
+            </span>
+            {files.length > 1 ? (
+              <span className="text-[11px] text-teal-400/90 flex items-center gap-1 font-medium">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                </svg>
+                Drag items to rearrange
+              </span>
+            ) : files.length === 1 ? (
+              <button
+                type="button"
+                onClick={clearAllFiles}
+                className="text-[11px] text-slate-400 hover:text-red-400 transition-colors"
+              >
+                Clear
+              </button>
+            ) : null}
+          </div>
+
+          {/* Draggable File List */}
+          <div className="flex-grow overflow-y-auto custom-scrollbar pr-1 space-y-2 mb-4">
             {files.length === 0 ? (
-              <div className="text-center text-slate-500 text-sm mt-8">No files selected yet.</div>
+              <div className="flex flex-col items-center justify-center py-10 px-4 text-center border border-dashed border-slate-800 rounded-xl bg-slate-900/30">
+                <svg className="w-8 h-8 text-slate-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p className="text-sm text-slate-400 font-medium">No files selected yet</p>
+                <p className="text-xs text-slate-500 mt-1">Upload at least 2 PDFs above to arrange and merge</p>
+              </div>
             ) : (
-              files.map((item, idx) => (
-                <div key={item.id} className="flex items-center justify-between bg-slate-800 p-3 rounded-lg border border-slate-700">
-                  <span className="text-sm text-slate-200 truncate w-2/3" title={item.displayName}>
-                    <span className="font-bold text-slate-500 mr-2">{idx + 1}.</span>{item.displayName}
-                  </span>
-                  
-                  <div className="flex items-center gap-1">
-                    <button type="button" onClick={() => moveFile(idx, 'up')} disabled={idx === 0} className="p-1 text-slate-400 hover:text-white disabled:opacity-30">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7"></path></svg>
-                    </button>
-                    <button type="button" onClick={() => moveFile(idx, 'down')} disabled={idx === files.length - 1} className="p-1 text-slate-400 hover:text-white disabled:opacity-30">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </button>
-                    <button type="button" onClick={() => removeFile(idx)} className="p-1 text-red-400 hover:text-red-300 ml-2">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                    </button>
+              files.map((item, idx) => {
+                const isBeingDragged = draggedIndex === idx;
+                const isOver = dragOverIndex === idx && draggedIndex !== idx;
+
+                return (
+                  <div
+                    key={item.id}
+                    data-file-index={idx}
+                    draggable
+                    onDragStart={(e) => handleItemDragStart(e, idx)}
+                    onDragOver={(e) => handleItemDragOver(e, idx)}
+                    onDrop={(e) => handleItemDrop(e, idx)}
+                    onDragEnd={handleItemDragEnd}
+                    className={`relative group rounded-xl p-3 border transition-all duration-150 flex items-center justify-between gap-2.5 select-none ${
+                      isBeingDragged
+                        ? 'opacity-40 border-dashed border-teal-500 bg-slate-900/70 scale-[0.99]'
+                        : isOver
+                        ? 'border-teal-400 bg-teal-950/40 ring-2 ring-teal-500/50 shadow-lg shadow-teal-500/10 scale-[1.01]'
+                        : 'bg-slate-800/90 hover:bg-slate-800 border-slate-700/80 hover:border-slate-600 shadow-sm cursor-grab active:cursor-grabbing'
+                    }`}
+                  >
+                    {/* Left: Drag Handle + Number badge + PDF icon + Name & Size */}
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      {/* Touch & Click Drag Grip Handle */}
+                      <div
+                        onTouchStart={(e) => handleTouchStart(e, idx)}
+                        onTouchMove={handleTouchMove}
+                        onTouchEnd={handleTouchEnd}
+                        onTouchCancel={handleTouchEnd}
+                        className="cursor-grab active:cursor-grabbing text-slate-500 hover:text-teal-400 active:text-teal-300 p-1 -ml-1 rounded transition-colors touch-none select-none shrink-0"
+                        title="Drag to rearrange"
+                        aria-label={`Drag to rearrange ${item.displayName}`}
+                      >
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                          <path d="M7 2a2 2 0 10.001 4.001A2 2 0 007 2zm0 6a2 2 0 10.001 4.001A2 2 0 007 8zm0 6a2 2 0 10.001 4.001A2 2 0 007 14zm6-12a2 2 0 10.001 4.001A2 2 0 0013 2zm0 6a2 2 0 10.001 4.001A2 2 0 0013 8zm0 6a2 2 0 10.001 4.001A2 2 0 0013 14z" />
+                        </svg>
+                      </div>
+
+                      {/* Sequence Number */}
+                      <span className="w-6 h-6 rounded-md bg-slate-900/90 border border-slate-700/80 text-teal-400 text-xs font-bold flex items-center justify-center shrink-0">
+                        {idx + 1}
+                      </span>
+
+                      {/* PDF File Icon */}
+                      <svg className="w-4 h-4 text-red-400 shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                        <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                      </svg>
+
+                      {/* File Details */}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-slate-200 truncate" title={item.displayName}>
+                          {item.displayName}
+                        </p>
+                        <p className="text-[11px] text-slate-400 font-mono">
+                          {(item.file.size / (1024 * 1024)).toFixed(2)} MB
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Right: Step Move Buttons & Delete */}
+                    <div 
+                      className="flex items-center gap-1 shrink-0"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => moveFile(idx, 'up')}
+                        disabled={idx === 0}
+                        title="Move up"
+                        aria-label={`Move ${item.displayName} up`}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/60 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7"></path></svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveFile(idx, 'down')}
+                        disabled={idx === files.length - 1}
+                        title="Move down"
+                        aria-label={`Move ${item.displayName} down`}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/60 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeFile(idx)}
+                        title="Remove file"
+                        aria-label={`Remove ${item.displayName}`}
+                        className="p-1.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-950/40 ml-1 transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
 
-          <button 
-            type="button"
-            onClick={handleMerge}
-            disabled={files.length < 2 || isMerging}
-            className="w-full bg-teal-600 hover:bg-teal-500 text-white font-bold py-3.5 px-4 rounded-xl transition-colors shadow-lg shadow-teal-500/20 disabled:opacity-50 disabled:cursor-not-allowed mt-auto"
-          >
-            {isMerging ? 'Merging...' : `Merge ${files.length} PDFs`}
-          </button>
+          {/* Action Row */}
+          <div className="flex items-center gap-2 mt-auto pt-2">
+            {files.length > 0 && (
+              <button
+                type="button"
+                onClick={clearAllFiles}
+                className="py-3.5 px-4 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-red-300 border border-slate-800 hover:border-red-900/50 rounded-xl transition-colors font-medium text-xs sm:text-sm shrink-0"
+              >
+                Clear All
+              </button>
+            )}
+            <button 
+              type="button"
+              onClick={handleMerge}
+              disabled={files.length < 2 || isMerging}
+              className="flex-1 bg-teal-600 hover:bg-teal-500 text-white font-bold py-3.5 px-4 rounded-xl transition-all shadow-lg shadow-teal-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isMerging ? 'Merging...' : files.length >= 2 ? `Merge ${files.length} PDFs` : 'Select at least 2 PDFs'}
+            </button>
+          </div>
         </div>
 
         {/* RIGHT COLUMN: The PDF Preview */}
@@ -265,7 +550,7 @@ export default function PdfMerger() {
             </div>
           )}
 
-          {/* UNIFIED PREVIEW CONTAINER: Follows the group form mobile card layout on all screens */}
+          {/* UNIFIED PREVIEW CONTAINER */}
           <div className="flex-grow min-h-0 overflow-y-auto custom-scrollbar p-2 sm:p-3 space-y-4 h-[65vh] lg:h-auto">
             {mergedUrl ? (
               mergedPages.length > 1 && previewPage === 'both' ? (
