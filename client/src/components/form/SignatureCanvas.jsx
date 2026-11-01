@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import SignaturePad from 'react-signature-canvas';
 import { isSafeSignatureDataUrl, logSafeError, validateImageUpload } from '../../utils/security';
 
@@ -68,6 +68,128 @@ export default function SignatureCanvas({ onSaveSignature }) {
   const [uploadedImage, setUploadedImage] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const sigCanvas = useRef(null);
+  const containerRef = useRef(null);
+
+  /**
+   * Resizes the underlying signature canvas bitmap to match its container's CSS dimensions
+   * scaled by window.devicePixelRatio. Preserves any existing stroke data.
+   */
+  const resizeCanvas = useCallback(() => {
+    const padWrapper = sigCanvas.current;
+    if (!padWrapper) return;
+
+    let canvas = null;
+    let sigPad = null;
+    try {
+      canvas = padWrapper.getCanvas();
+      sigPad = padWrapper.getSignaturePad();
+    } catch {
+      return;
+    }
+    if (!canvas || !sigPad) return;
+
+    const container = containerRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const width = rect.width || canvas.offsetWidth || container?.offsetWidth || 0;
+    const height = rect.height || canvas.offsetHeight || container?.offsetHeight || 160;
+
+    // If container is hidden (e.g. display: none in unselected tab/screen), width will be 0.
+    if (width <= 0) return;
+
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    const targetWidth = Math.round(width * ratio);
+    const targetHeight = Math.round(height * ratio);
+
+    // If canvas buffer dimensions already match target, avoid redundant canvas reset
+    if (canvas.width === targetWidth && canvas.height === targetHeight) {
+      return;
+    }
+
+    // Preserve existing stroke data if any
+    let strokeData = null;
+    try {
+      if (!sigPad.isEmpty()) {
+        strokeData = sigPad.toData();
+      }
+    } catch {
+      /* ignore */
+    }
+
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.scale(ratio, ratio);
+    }
+
+    sigPad.clear();
+    if (strokeData && strokeData.length > 0) {
+      try {
+        sigPad.fromData(strokeData);
+        // SignaturePad v2.3.2 bug fix: fromData calls clear() which leaves _isEmpty = true.
+        // Explicitly restore _isEmpty flag so isEmpty() returns false after restoring strokes.
+        sigPad._isEmpty = false;
+      } catch {
+        /* ignore */
+      }
+    }
+  }, []);
+
+  /**
+   * Guard for pointer and touch interactions to guarantee canvas has been measured and sized.
+   */
+  const handleCanvasInteraction = () => {
+    const padWrapper = sigCanvas.current;
+    if (!padWrapper) return;
+    try {
+      const canvas = padWrapper.getCanvas();
+      if (!canvas) return;
+      if (canvas.width === 0 || canvas.height === 0) {
+        resizeCanvas();
+      }
+    } catch {
+      /* ignore */
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab !== 'draw') return;
+
+    // 1. Immediate resize attempt
+    resizeCanvas();
+
+    // 2. Next animation frame attempt (in case DOM layout calculation is delayed)
+    const rafId = requestAnimationFrame(() => {
+      resizeCanvas();
+    });
+
+    // 3. ResizeObserver on the container to detect when tabs/drawers/modals switch from display: none to block
+    const container = containerRef.current;
+    let resizeObserver = null;
+    if (typeof ResizeObserver !== 'undefined' && container) {
+      resizeObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const { width, height } = entry.contentRect;
+          if (width > 0 && height > 0) {
+            resizeCanvas();
+          }
+        }
+      });
+      resizeObserver.observe(container);
+    }
+
+    // 4. Window resize listener as fallback
+    window.addEventListener('resize', resizeCanvas);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+      window.removeEventListener('resize', resizeCanvas);
+    };
+  }, [activeTab, resizeCanvas]);
 
   const clearCanvas = () => {
     sigCanvas.current?.clear();
@@ -147,22 +269,28 @@ export default function SignatureCanvas({ onSaveSignature }) {
         </button>
       </div>
 
-      {activeTab === 'draw' ? (
-        <div>
-          {/* Keep the canvas pad itself white so the black pen is visible */}
-          <div className="border border-slate-600 bg-white rounded-md mb-2 overflow-hidden">
-            <SignaturePad
-              ref={sigCanvas}
-              canvasProps={{
-                className: 'signature-canvas w-full h-40 rounded-md cursor-crosshair touch-none',
-              }}
-            />
-          </div>
-          <button type="button" onClick={clearCanvas} className="text-xs text-red-400 hover:text-red-300 hover:underline">
-            Clear
-          </button>
+      <div className={activeTab === 'draw' ? 'block' : 'hidden'}>
+        {/* Keep the canvas pad itself white so the black pen is visible */}
+        <div
+          ref={containerRef}
+          className="border border-slate-600 bg-white rounded-md mb-2 overflow-hidden"
+        >
+          <SignaturePad
+            ref={sigCanvas}
+            clearOnResize={false}
+            canvasProps={{
+              className: 'signature-canvas w-full h-40 rounded-md cursor-crosshair touch-none',
+              onPointerDown: handleCanvasInteraction,
+              onTouchStart: handleCanvasInteraction,
+            }}
+          />
         </div>
-      ) : (
+        <button type="button" onClick={clearCanvas} className="text-xs text-red-400 hover:text-red-300 hover:underline">
+          Clear
+        </button>
+      </div>
+
+      <div className={activeTab === 'upload' ? 'block' : 'hidden'}>
         <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-600 rounded-md h-40 bg-slate-900/50 p-3 text-center">
           <input
             type="file"
@@ -173,7 +301,7 @@ export default function SignatureCanvas({ onSaveSignature }) {
           <p className="text-[11px] text-slate-500 mt-1.5">PNG or JPEG only, max 2 MB</p>
           {uploadedImage && <p className="text-xs text-teal-400 mt-1">Image verified & loaded safely.</p>}
         </div>
-      )}
+      </div>
 
       {errorMessage && (
         <p role="alert" className="text-xs text-red-400 mt-2 font-medium">
