@@ -13,3 +13,6 @@ client/dist-ssr/
 # Logs & OS Files
 *.log
 .DS_Store
+
+# Local Netlify folder
+.netlify
