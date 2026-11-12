@@ -463,63 +463,26 @@ export default function App() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-            
-            {/* LEFT COLUMN: Developer Info */}
-            <div data-reveal className="md:col-span-1 bg-slate-900/80 backdrop-blur-md p-6 md:p-8 rounded-3xl border border-slate-800 shadow-xl flex flex-col items-center justify-center text-center transition-transform hover:-translate-y-1 h-full">
-              
-              <img 
-                src="/profile.jpg" 
-                alt="Eldion Ryan Godius" 
-                className="w-28 h-28 md:w-40 md:h-40 rounded-full object-cover border-2 border-teal-500/50 shadow-[0_0_15px_rgba(20,184,166,0.2)] mb-4 md:mb-5"
-              />
-              
-              <h3 className="text-lg md:text-xl font-bold text-white tracking-tight leading-tight mb-1.5 md:mb-2">
-                Eldion Ryan Godius
-              </h3>
-              <p className="text-slate-400 text-xs md:text-sm font-medium tracking-wide mb-5 md:mb-6">
-                Software Engineering, Universiti Malaysia Sabah
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+            <div data-reveal className="bg-slate-900/80 backdrop-blur-md p-6 md:p-8 rounded-3xl border border-slate-800 shadow-xl text-left transition-transform hover:-translate-y-1 flex flex-col">
+              <div className="bg-teal-500/10 w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center mb-4 md:mb-5 border border-teal-500/20 shadow-inner">
+                <svg className="w-5 h-5 md:w-6 md:h-6 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+              </div>
+              <h3 className="text-lg md:text-xl font-bold text-white mb-2 tracking-tight">Why it was built</h3>
+              <p className="text-slate-400 leading-relaxed text-xs md:text-sm">
+                Declaraform was created to digitize the repetitive, time-consuming process of filling out academic declaration forms for Computer Science Students at Universiti Malaysia Sabah. It eliminates manual formatting, printing, and messy digital signature pasting by automating the entire workflow into a few simple clicks.
               </p>
-              
-              <div className="flex flex-col gap-2.5 items-center">
-                <span className="px-3 py-1 bg-teal-500/10 border border-teal-500/30 text-teal-400 text-xs font-bold rounded-md uppercase tracking-wider">
-                  Founder & Maintainer
-                </span>
-                
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold rounded-md">
-                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2L14.6 9.4L22 12L14.6 14.6L12 22L9.4 14.6L2 12L9.4 9.4L12 2ZM5.5 4.5L6.5 7L9 8L6.5 9L5.5 11.5L4.5 9L2 8L4.5 7L5.5 4.5Z" />
-                  </svg>
-                  Assisted by Gemini Pro
-                </div>
-              </div>
             </div>
 
-            {/* RIGHT COLUMN: Stacked Info Cards */}
-            <div className="md:col-span-2 flex flex-col gap-6">
-              
-              <div data-reveal className="bg-slate-900/80 backdrop-blur-md p-6 md:p-8 rounded-3xl border border-slate-800 shadow-xl text-left transition-transform hover:-translate-x-1 flex-1">
-                <div className="bg-teal-500/10 w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center mb-4 md:mb-5 border border-teal-500/20 shadow-inner">
-                  <svg className="w-5 h-5 md:w-6 md:h-6 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                </div>
-                <h3 className="text-lg md:text-xl font-bold text-white mb-2 tracking-tight">Why it was built</h3>
-                <p className="text-slate-400 leading-relaxed text-xs md:text-sm">
-                  Declaraform was created to digitize the repetitive, time-consuming process of filling out academic declaration forms for Computer Science Students at Universiti Malaysia Sabah. It eliminates manual formatting, printing, and messy digital signature pasting by automating the entire workflow into a few simple clicks.
-                </p>
+            <div data-reveal className="bg-slate-900/80 backdrop-blur-md p-6 md:p-8 rounded-3xl border border-slate-800 shadow-xl text-left transition-transform hover:-translate-y-1 flex flex-col">
+              <div className="bg-teal-500/10 w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center mb-4 md:mb-5 border border-teal-500/20 shadow-inner">
+                <svg className="w-5 h-5 md:w-6 md:h-6 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
               </div>
-
-              <div data-reveal className="bg-slate-900/80 backdrop-blur-md p-6 md:p-8 rounded-3xl border border-slate-800 shadow-xl text-left transition-transform hover:-translate-x-1 flex-1">
-                <div className="bg-teal-500/10 w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center mb-4 md:mb-5 border border-teal-500/20 shadow-inner">
-                  <svg className="w-5 h-5 md:w-6 md:h-6 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                </div>
-                <h3 className="text-lg md:text-xl font-bold text-white mb-2 tracking-tight">Zero-Data Policy</h3>
-                <p className="text-slate-400 leading-relaxed text-xs md:text-sm">
-                  Your data never leaves your device. This application runs 100% locally in your browser. Absolutely no personal information, matriculation numbers, or drawn signatures are ever uploaded to a server, tracked, or persisted to disk storage. What happens on your device, stays in memory on your device.
-                </p>
-              </div>
-
+              <h3 className="text-lg md:text-xl font-bold text-white mb-2 tracking-tight">Zero-Data Policy</h3>
+              <p className="text-slate-400 leading-relaxed text-xs md:text-sm">
+                Your data never leaves your device. This application runs 100% locally in your browser. Absolutely no personal information, matriculation numbers, or drawn signatures are ever uploaded to a server, tracked, or persisted to disk storage. What happens on your device, stays in memory on your device.
+              </p>
             </div>
-
           </div>
         </section>
 
@@ -655,13 +618,13 @@ export default function App() {
         {/* Global Footer */}
         <footer 
           data-reveal 
-          className={`mt-10 md:mt-20 text-center text-xs md:text-sm text-slate-500 drop-shadow-md px-4 ${
+          className={`max-w-6xl mx-auto px-4 md:px-8 mt-12 md:mt-20 text-center text-xs md:text-sm drop-shadow-md ${
             mobileScreen === 'home' || mobileScreen === 'about' ? 'block' : 'hidden md:block'
           }`}
         >
-          <p>Concept and Development by <strong>Eldion Ryan Godius</strong>.</p>
-          <p className="mt-1.5 text-[11px] md:text-xs opacity-75">
-            &copy; {new Date().getFullYear()} All Rights Reserved. Not officially affiliated with Universiti Malaysia Sabah.
+          <p className="font-medium text-slate-300">Eldion Ryan Godius</p>
+          <p className="mt-1 text-[11px] md:text-xs text-slate-500">
+            &copy; {new Date().getFullYear()} &middot; Built With Gemini
           </p>
         </footer>
 
