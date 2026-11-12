@@ -1,10 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
-import pdfWorker from '../../utils/pdfWorker.js?worker&url';
+import * as pdfjsWorker from 'pdfjs-dist/build/pdf.worker.mjs';
 import { isSafeBlobUrl, logSafeError } from '../../utils/security';
 
-// Configure pdfjs worker to use the bundled worker script containing iOS polyfills
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
+// Register WorkerMessageHandler on globalThis so PDF.js runs in-thread without worker thread issues on mobile iOS
+if (typeof globalThis !== 'undefined') {
+  globalThis.pdfjsWorker = { WorkerMessageHandler: pdfjsWorker.WorkerMessageHandler };
+}
+if (typeof window !== 'undefined') {
+  window.pdfjsWorker = { WorkerMessageHandler: pdfjsWorker.WorkerMessageHandler };
+}
+pdfjsLib.GlobalWorkerOptions.workerSrc = '';
 
 export default function PdfPreviewCanvas({ url, bytes = null, pageNumber = 1, className = '' }) {
   const canvasRef = useRef(null);
@@ -133,15 +139,17 @@ export default function PdfPreviewCanvas({ url, bytes = null, pageNumber = 1, cl
   return (
     <div className={`relative flex flex-col items-center justify-center w-full ${className}`}>
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-slate-900/60 z-10 text-xs text-teal-400">
+        <div className="absolute inset-0 flex items-center justify-center bg-slate-900/60 z-10 text-xs text-teal-400 min-h-[200px]">
           <span className="animate-pulse">Rendering preview...</span>
         </div>
       )}
-      {error ? (
-        <div className="p-4 text-xs text-red-400 text-center">{error}</div>
-      ) : (
-        <canvas ref={canvasRef} className="max-w-full rounded shadow" />
+      {error && (
+        <div className="p-4 text-xs text-red-400 text-center z-10">{error}</div>
       )}
+      <canvas
+        ref={canvasRef}
+        className={`max-w-full rounded shadow ${error ? 'hidden' : 'block'}`}
+      />
     </div>
   );
 }
