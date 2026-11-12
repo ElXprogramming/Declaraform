@@ -1,3 +1,4 @@
+import './utils/polyfills.js';
 import '@fontsource-variable/lexend';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
