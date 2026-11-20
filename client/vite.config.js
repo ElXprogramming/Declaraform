@@ -31,7 +31,7 @@ const PROD_CSP = [
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
-  "font-src 'self'",
+  "font-src 'self' data:",
   "connect-src 'self' blob: https://script.google.com https://script.googleusercontent.com",
   "frame-src 'self' blob:",
   "worker-src 'self' blob:",
@@ -68,6 +68,7 @@ export default defineConfig({
     },
   },
   build: {
+    target: ['es2020', 'safari15', 'chrome90'],
     sourcemap: false,
   },
 });
